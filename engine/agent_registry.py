@@ -57,6 +57,7 @@ class AgentRecord(Base):
 
 
 class AgentRegistration(BaseModel):
+    agent_id: Optional[str] = None
     tenant_id: str = Field(min_length=1, max_length=128)
     name: str = Field(min_length=1, max_length=255)
     platform: str = Field(min_length=1, max_length=64)
@@ -115,7 +116,13 @@ class AgentRegistry:
         return f"{slug}-{uuid.uuid4().hex[:12]}"
 
     def register(self, request: AgentRegistration) -> tuple[AgentView, str]:
-        agent_id = self._new_agent_id(request.platform)
+        agent_id = request.agent_id or self._new_agent_id(request.platform)
+        if not agent_id.replace("-", "").replace("_", "").isalnum():
+            raise ValueError("agent_id must contain only letters, numbers, hyphens or underscores")
+        with self.Session() as session:
+            existing = session.get(AgentRecord, agent_id)
+            if existing and existing.enabled:
+                raise ValueError("agent_id_already_registered")
         token = "pra_" + secrets.token_urlsafe(32)
         record = AgentRecord(
             agent_id=agent_id,
