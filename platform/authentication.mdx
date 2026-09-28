@@ -1,56 +1,132 @@
 ---
 title: Authentication
-description: OAuth, OIDC, JWT and session authentication
+description: OAuth, OIDC, JWT, MCP authorization and session security
 ---
 
-Pravidhi supports two complementary authentication patterns.
+Pravidhi supports authentication at two boundaries: the application/control-plane boundary and the remote MCP resource-server boundary.
 
-## OAuth
+## MCP OAuth
 
-The control plane exposes provider discovery and OAuth entry points:
+The production MCP resource server is:
 
 ```
-GET /auth/providers
-GET /auth/google
-GET /auth/google/callback
-GET /auth/github
-GET /auth/github/callback
-GET /auth/session
-POST /auth/logout
+https://mcp.pravidhisolutions.in/mcp
 ```
 
-The reference deployment uses Google and GitHub as optional identity providers.
+The authorization server is the Pravidhi Keycloak realm:
 
-OAuth client secrets must remain server-side.
+```
+https://mcp.pravidhisolutions.in/auth/realms/pravidhi
+```
 
-## OIDC / JWT
+OIDC discovery:
 
-For enterprise identity providers, configure:
+```
+https://mcp.pravidhisolutions.in/auth/realms/pravidhi/.well-known/openid-configuration
+```
 
+JWKS:
+
+```
+https://mcp.pravidhisolutions.in/auth/realms/pravidhi/protocol/openid-connect/certs
+```
+
+Protected-resource metadata:
+
+```
+https://mcp.pravidhisolutions.in/.well-known/oauth-protected-resource
+```
+
+## OAuth flow
+
+The reference ChatGPT integration uses authorization code flow with PKCE S256.
+
+The pre-registered ChatGPT client is:
+
+```
+https://chatgpt.com/oauth/client.json
+```
+
+Callback:
+
+```
+https://chatgpt.com/connector_platform_oauth_redirect
+```
+
+The authorization server must accept the scopes requested by the client, including standard OIDC scopes such as `openid` and `offline_access`, plus the Pravidhi scopes.
+
+## Pravidhi scopes
+
+- `pravidhi.read` — authenticated read capabilities
+- `pravidhi.execute` — authorized execution capabilities
+- `pravidhi.admin` — administrative capabilities
+
+Scopes are not a replacement for RBAC. The control plane must apply tenant and role policy after token validation.
+
+## JWT validation
+
+The MCP resource server validates:
+
+- JWT signature
+- signing-key `kid`
 - issuer
-- audience
-- JWKS endpoint
+- resource audience
+- `exp`
+- `nbf`
+- required scopes
 
-JWT validation should verify signature, issuer, audience, expiry and relevant claims.
+The resource audience is:
 
-## Identity claims
+```
+https://mcp.pravidhisolutions.in
+```
 
-Tenant identity may be supplied through trusted claims such as:
+Tokens that fail validation must not reach protected tool execution.
+
+## Control-plane identity
+
+The control plane can use trusted OIDC claims for tenant and role context.
+
+Tenant claims may include:
 
 - `tenant_id`
 - `org_id`
 - `organization_id`
 
-Roles may be derived from claims such as:
+Role context may include:
 
 - `roles`
 - `realm_access.roles`
 - `scope`
 
-## Sessions
-
-OAuth login can establish an HttpOnly, Secure session cookie. Treat the session as a bearer credential and invalidate it on logout.
+These claims must be accepted only after the token's issuer, signature and audience have been validated.
 
 ## Role mapping
 
-OAuth identities should default to the minimum required role. Production deployments should maintain an explicit allowlist or role mapping for users who require operator or administrator capabilities.
+The reference realm defines:
+
+- `pravidhi-user`
+- `pravidhi-operator`
+- `pravidhi-admin`
+
+Recommended policy:
+
+| Capability | Required scope | Role |
+|---|---|---|
+| Read | `pravidhi.read` | user/operator/admin |
+| Execute | `pravidhi.execute` | operator/admin |
+| Admin | `pravidhi.admin` | admin |
+
+The actual control-plane policy is authoritative.
+
+## Application sessions
+
+The control plane may also establish an HttpOnly, Secure session cookie for browser-based application login.
+
+Treat sessions as bearer credentials and invalidate them on logout.
+
+## Secrets
+
+OAuth client secrets, Keycloak admin credentials, signing keys, bearer tokens and production environment files must remain outside Git.
+
+Use `.env.example` to document configuration shape without values.
