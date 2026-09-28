@@ -34,7 +34,12 @@ def principal_from_request(request: Request) -> Principal | None:
     token, expected = extract_bearer(request), _configured_key()
     if not token or not expected or not _constant_time_equal(token, expected):
         return None
-    return Principal(subject=request.headers.get('x-pravidhi-subject', 'api-key-client'), role=request.headers.get('x-pravidhi-role', 'operator'), tenant_id=request.headers.get('x-pravidhi-tenant', os.getenv('PRAVIDHI_TENANT_ID', 'default')))
+    trusted_headers = os.getenv('PRAVIDHI_TRUST_IDENTITY_HEADERS', '').lower() == 'true'
+    return Principal(
+        subject=request.headers.get('x-pravidhi-subject', 'api-key-client') if trusted_headers else 'api-key-client',
+        role=request.headers.get('x-pravidhi-role', 'operator') if trusted_headers else os.getenv('PRAVIDHI_API_ROLE', 'operator'),
+        tenant_id=request.headers.get('x-pravidhi-tenant', os.getenv('PRAVIDHI_TENANT_ID', 'default')) if trusted_headers else os.getenv('PRAVIDHI_TENANT_ID', 'default'),
+    )
 
 class CommercialSecurityMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, protected_prefixes: Iterable[str] = ('/api/','/v1/')):
