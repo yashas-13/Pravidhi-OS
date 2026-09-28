@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pravidhi"
+version = "1.0.0"
+description = "Self-Progressive AI Ecosystem — Non-stop self-improving agent harness with cybersecurity, reverse engineering, offline cron, auto-research, and web control UI"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Pravidhi Team"},
+]
+keywords = ["ai", "agent", "automation", "cron", "research", "cybersecurity", "pentest", "reverse-engineering", "ghidra", "mcp"]
+
+dependencies = [
+    "click>=8.0",
+    "pyyaml>=6.0",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "httpx>=0.28",
+    "fastapi>=0.136",
+    "uvicorn>=0.49",
+    "python-dotenv>=1.0",
+    "sqlalchemy>=2.0",
+    "rich>=15.0",
+    "apscheduler>=3.10",
+    "python-multipart>=0.0.30",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "black>=24.0",
+    "ruff>=0.5",
+]
+research = [
+    "numpy>=2.0",
+    "scikit-learn>=1.5",
+]
+cyber = [
+    "vulnclaw>=0.1.0",
+    "beautifulsoup4>=4.12",
+    "lxml>=5.0",
+]
+re = [
+    "z3-solver>=4.13",
+    "anthropic>=0.30",
+    "openai>=1.0",
+]
+all = [
+    "pravidhi[dev,research,cyber,re]",
+]
+
+[project.scripts]
+pravidhi = "gateway.cli:cli"
+
+[tool.setuptools.packages.find]
+include = ["pravidhi*", "engine*", "cron*", "gateway*", "memory*", "research*", "plugins*", "cyber*", "router_agent*"]
+
+[tool.setuptools.package-data]
+"pravidhi" = ["py.typed"]
