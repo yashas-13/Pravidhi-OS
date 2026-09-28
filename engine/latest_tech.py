@@ -143,78 +143,7 @@ class MCPManager:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 2. Agent-to-Agent Protocol (A2A)
-# ═══════════════════════════════════════════════════════════════════════════════
-
-@dataclass
-class AgentMessage:
-    """Message exchanged between agents."""
-    id: str = field(default_factory=lambda: uuid.uuid4().hex[:8])
-    sender: str = "pravidhi"
-    recipient: str = ""
-    type: str = "request"  # request | response | broadcast
-    intent: str = ""
-    payload: Dict[str, Any] = field(default_factory=dict)
-    context: Dict[str, Any] = field(default_factory=dict)
-    timestamp: float = field(default_factory=time.time)
-
-
-class AgentNetwork:
-    """Agent-to-Agent communication network."""
-
-    def __init__(self):
-        self.agents: Dict[str, Dict[str, Any]] = {
-            "pravidhi": {"name": "Pravidhi", "role": "orchestrator", "capabilities": ["all"]},
-        }
-        self.message_history: List[AgentMessage] = []
-
-    def register_agent(self, agent_id: str, name: str, role: str,
-                        capabilities: List[str], endpoint: str = "") -> None:
-        """Register an agent in the network."""
-        self.agents[agent_id] = {
-            "name": name, "role": role,
-            "capabilities": capabilities,
-            "endpoint": endpoint,
-            "registered_at": time.time(),
-        }
-
-    async def send_message(self, message: AgentMessage) -> Optional[Dict[str, Any]]:
-        """Send a message to another agent and optionally await response."""
-        self.message_history.append(message)
-
-        recipient = self.agents.get(message.recipient)
-        if not recipient:
-            logger.warning(f"Agent {message.recipient} not found")
-            return None
-
-        # If the agent has an HTTP endpoint, use it
-        if recipient.get("endpoint"):
-            try:
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    resp = await client.post(
-                        recipient["endpoint"],
-                        json={
-                            "type": message.type,
-                            "intent": message.intent,
-                            "payload": message.payload,
-                            "context": message.context,
-                        }
-                    )
-                    return resp.json() if resp.status_code == 200 else None
-            except Exception as e:
-                logger.error(f"A2A send failed to {message.recipient}: {e}")
-                return None
-
-        # In-process agent (future: sub-agent pool)
-        return {"status": "received", "agent": message.recipient, "message_id": message.id}
-
-    def discover_agents(self) -> Dict[str, Dict[str, Any]]:
-        """Discover all agents in the network."""
-        return dict(self.agents)
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# 3. Streaming Response Multiplexer (SSE + WebSocket)
+# 2. Agent-to-Agent Protocol (A2A)\n# ═══════════════════════════════════════════════════════════════════════════════\n\n@dataclass\nclass AgentMessage:\n    """Message exchanged between agents."""\n    id: str = field(default_factory=lambda: uuid.uuid4().hex[:8])\n    sender: str = "pravidhi"\n    recipient: str = ""\n    type: str = "request"\n    intent: str = ""\n    payload: Dict[str, Any] = field(default_factory=dict)\n    context: Dict[str, Any] = field(default_factory=dict)\n    timestamp: float = field(default_factory=time.time)\n\n\nclass AgentNetwork:\n    """A2A transport view backed by the authoritative Pravidhi agent registry.\n\n    This class no longer owns agent identity. Registration, tenant binding,\n    capabilities and lifecycle state belong to engine.agent_registry.\n    """\n\n    def __init__(self):\n        self.message_history: List[AgentMessage] = []\n\n    def discover_agents(self, tenant_id: Optional[str] = None) -> Dict[str, Dict[str, Any]]:\n        from engine.agent_registry import get_agent_registry\n        return {\n            agent.agent_id: agent.model_dump(mode="json")\n            for agent in get_agent_registry().list(tenant_id=tenant_id)\n        }\n\n    async def send_message(self, message: AgentMessage) -> Optional[Dict[str, Any]]:\n        self.message_history.append(message)\n        recipient = self.discover_agents().get(message.recipient)\n        if not recipient:\n            logger.warning("Agent %s not found in authoritative registry", message.recipient)\n            return None\n        endpoint = recipient.get("metadata", {}).get("a2a_endpoint", "")\n        if endpoint:\n            try:\n                async with httpx.AsyncClient(timeout=30.0) as client:\n                    resp = await client.post(\n                        endpoint,\n                        json={"type": message.type, "intent": message.intent,\n                              "payload": message.payload, "context": message.context},\n                    )\n                    return resp.json() if resp.status_code == 200 else None\n            except Exception as exc:\n                logger.error("A2A send failed to %s: %s", message.recipient, exc)\n                return None\n        return {"status": "received", "agent": message.recipient, "message_id": message.id}\n\n\n# 3. Streaming Response Multiplexer (SSE + WebSocket)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class StreamMultiplexer:
