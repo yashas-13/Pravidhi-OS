@@ -1,0 +1,55 @@
+---
+title: Security
+description: Security model and production hardening
+---
+
+Security is a first-class design constraint.
+
+## Controls
+
+- RS256 JWT validation
+- issuer and audience verification
+- JWKS-based signature validation
+- OAuth state protection
+- HttpOnly Secure session cookies
+- tenant-scoped workspaces
+- command allowlisting
+- non-root execution
+- request correlation IDs
+- security headers
+- request body limits
+- rate limiting
+- approval gates
+- JSONL audit events
+- systemd service hardening
+
+## Execution isolation
+
+The reference service uses OS-level restrictions such as:
+
+- `NoNewPrivileges`
+- `PrivateTmp`
+- `ProtectHome`
+- `PrivateDevices`
+- `ProtectKernelModules`
+- `ProtectKernelTunables`
+- `ProtectControlGroups`
+- `RestrictNamespaces`
+- `RestrictRealtime`
+- `LockPersonality`
+- memory and task limits
+
+For hostile or multi-tenant workloads, add a stronger sandbox such as a dedicated VM, container boundary, bubblewrap, nsjail, or an equivalent policy-enforced runtime.
+
+## Secrets
+
+Never commit:
+
+- OAuth client secrets
+- JWT signing keys
+- private keys
+- API tokens
+- session secrets
+- production environment files
+
+Rotate any credential that is accidentally exposed.
