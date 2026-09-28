@@ -1,0 +1,41 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Pravidhi OS",
+  "description": "Pravidhi OS — an authenticated control plane and agent interface for AI-driven machine operations.",
+  "colors": {
+    "primary": "#6D5EF5",
+    "light": "#8B7CF6",
+    "dark": "#5548D8"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": [
+    {
+      "group": "Start",
+      "pages": ["index", "quickstart", "architecture"]
+    },
+    {
+      "group": "Platform",
+      "pages": ["platform/control-plane", "platform/agent-runtime", "platform/authentication", "platform/rbac", "platform/security"]
+    },
+    {
+      "group": "API",
+      "pages": ["api/overview", "api/health", "api/auth", "api/execution", "api/filesystem", "api/screen"]
+    },
+    {
+      "group": "CLI",
+      "pages": ["cli/overview", "cli/commands", "cli/configuration"]
+    },
+    {
+      "group": "Deployment",
+      "pages": ["deployment/production", "deployment/nginx", "deployment/systemd", "deployment/operations"]
+    },
+    {
+      "group": "Developers",
+      "pages": ["developers/contributing", "developers/testing", "developers/integrations", "developers/troubleshooting"]
+    }
+  ],
+  "footerSocials": {
+    "github": "https://github.com/yashas-13/Pravidhi-OS"
+  }
+}
