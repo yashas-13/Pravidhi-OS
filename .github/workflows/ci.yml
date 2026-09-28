@@ -14,8 +14,8 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install --upgrade pip
       - run: pip install -e '.[dev]'
-      - run: python -m compileall gateway engine cron memory research router_agent
-      - run: pytest -q tests/test_commercial_security.py
+      - run: python -m compileall gateway engine agents cron memory research router_agent tests
+      - run: pytest -q tests/test_commercial_security.py tests/test_agent_registry.py
   cli:
     runs-on: ubuntu-latest
     steps:
