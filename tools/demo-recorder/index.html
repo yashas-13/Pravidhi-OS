@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pravidhi OS — Demo Recorder</title>
+<style>
+:root{color-scheme:dark;--bg:#071018;--panel:#0d1722;--line:#243445;--text:#e8f0f7;--muted:#91a4b5;--accent:#6ee7b7;--danger:#fb7185}
+*{box-sizing:border-box}body{margin:0;font:14px Inter,system-ui,sans-serif;background:radial-gradient(circle at 20% 0,#10263a,#071018 45%);color:var(--text)}
+main{max-width:1100px;margin:0 auto;padding:32px 20px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
+h1{font-size:24px;margin:0}.badge{padding:7px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:1.4fr .8fr;gap:18px}.card{background:rgba(13,23,34,.92);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 16px 50px #0004}
+video{width:100%;aspect-ratio:16/9;background:#02060a;border-radius:12px;object-fit:contain}.controls{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}
+button{border:1px solid var(--line);background:#132231;color:var(--text);padding:10px 13px;border-radius:10px;cursor:pointer}
+button.primary{background:var(--accent);color:#052018;border-color:var(--accent);font-weight:700}button.danger{background:#3a1720;color:#ffd8df;border-color:#6d2635}
+button:disabled{opacity:.45;cursor:not-allowed}label{display:block;margin:13px 0;color:var(--muted)}input,select{width:100%;margin-top:7px;padding:10px;border-radius:9px;border:1px solid var(--line);background:#09131d;color:var(--text)}
+.status{margin-top:13px;padding:11px;border-radius:10px;background:#09131d;color:var(--muted);white-space:pre-wrap}.ok{color:var(--accent)}
+.timeline{margin-top:14px}.timeline input{padding:0}.meta{display:grid;grid-template-columns:1fr 1fr;gap:10px}.hint{color:var(--muted);line-height:1.5}
+@media(max-width:800px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<div class="top"><h1>Pravidhi OS · Demo Recorder</h1><span class="badge">Local capture • no upload</span></div>
+<div class="grid">
+<section class="card">
+<video id="preview" controls playsinline></video>
+<div class="controls">
+<button id="start" class="primary">● Start recording</button>
+<button id="pause" disabled>Pause</button>
+<button id="stop" class="danger" disabled>Stop</button>
+<button id="download" disabled>Download WebM</button>
+</div>
+<div class="status" id="status">Ready. Choose your screen/window when recording starts.</div>
+</section>
+<section class="card">
+<h2>Recording setup</h2>
+<label>Capture
+<select id="source"><option value="screen">Screen / window / tab</option><option value="camera">Camera</option></select></label>
+<label><input id="mic" type="checkbox" checked> Include microphone</label>
+<label><input id="systemAudio" type="checkbox" checked> Request system/tab audio</label>
+<label>Filename<input id="filename" value="pravidhi-os-demo"></label>
+<p class="hint">The browser handles capture locally. Screen content and microphone audio are not sent to the Pravidhi control plane.</p>
+<div class="timeline">
+<h3>Editor</h3>
+<div class="meta"><label>Start (sec)<input id="trimStart" type="number" min="0" value="0" step=".1"></label>
+<label>End (sec)<input id="trimEnd" type="number" min="0" value="0" step=".1"></label></div>
+<button id="apply" disabled>Set preview range</button>
+<p class="hint">The editor stores an in/out range for the demo. Original capture remains local until you download it.</p>
+</div>
+</section>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let recorder=null,stream=null,chunks=[],blob=null,startAt=0;
+function msg(s,ok=false){$("status").textContent=s;$("status").className="status"+(ok?" ok":"")}
+function mime(){return MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")?"video/webm;codecs=vp9,opus":"video/webm"}
+async function getStream(){
+  if($("source").value==="camera")return navigator.mediaDevices.getUserMedia({video:true,audio:$("mic").checked});
+  const display=await navigator.mediaDevices.getDisplayMedia({video:true,audio:$("systemAudio").checked});
+  if($("mic").checked){
+    try{
+      const mic=await navigator.mediaDevices.getUserMedia({audio:true});
+      const ac=new AudioContext(),dest=ac.createMediaStreamDestination();
+      [display,mic].forEach(s=>{const a=ac.createMediaStreamSource(s);a.connect(dest)});
+      return new MediaStream([...display.getVideoTracks(),...dest.stream.getAudioTracks()]);
+    }catch{msg("Screen capture started; microphone permission was not granted.")}
+  }
+  return display;
+}
+$("start").onclick=async()=>{
+  try{
+    stream=await getStream();chunks=[];blob=null;
+    recorder=new MediaRecorder(stream,{mimeType:mime(),videoBitsPerSecond:5000000});
+    recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+    recorder.onstop=()=>{
+      blob=new Blob(chunks,{type:mime()});$("preview").src=URL.createObjectURL(blob);$("download").disabled=false;$("apply").disabled=false;
+      const duration=(Date.now()-startAt)/1000;$("trimEnd").value=duration.toFixed(1);msg("Recording ready. Review it, set the in/out range, then download.",true);
+    };
+    recorder.onerror=e=>msg("Recorder error: "+(e.error?.message||"unknown"));
+    recorder.start(1000);startAt=Date.now();$("start").disabled=true;$("pause").disabled=false;$("stop").disabled=false;msg("Recording… browser capture is active.");
+    stream.getVideoTracks()[0].onended=()=>{if(recorder?.state==="recording")stop()};
+  }catch(e){msg("Capture cancelled or unavailable: "+e.message)}
+};
+function stop(){if(recorder&&recorder.state!=="inactive")recorder.stop();stream?.getTracks().forEach(t=>t.stop());$("start").disabled=false;$("pause").disabled=true;$("stop").disabled=true}
+$("stop").onclick=stop;
+$("pause").onclick=()=>{if(!recorder)return;if(recorder.state==="recording"){recorder.pause();$("pause").textContent="Resume";msg("Recording paused.")}else if(recorder.state==="paused"){recorder.resume();$("pause").textContent="Pause";msg("Recording resumed.")}};
+$("download").onclick=()=>{if(!blob)return;const a=document.createElement("a"),name=($("filename").value||"pravidhi-os-demo").replace(/[^a-z0-9._-]+/gi,"-");a.href=URL.createObjectURL(blob);a.download=name+".webm";a.click();URL.revokeObjectURL(a.href)};
+$("preview").onloadedmetadata=()=>{$("trimEnd").value=Number.isFinite($("preview").duration)?$("preview").duration.toFixed(1):$("trimEnd").value};
+$("apply").onclick=()=>{const v=$("preview"),s=Math.max(0,Number($("trimStart").value)||0),e=Math.max(s,Number($("trimEnd").value)||v.duration);v.currentTime=s;v.dataset.in=s;v.dataset.out=e;v.ontimeupdate=()=>{if(v.currentTime>=e)v.pause()};msg("Preview range set to "+s.toFixed(1)+"s → "+e.toFixed(1)+"s. Download currently contains the original local capture.")};
+window.addEventListener("beforeunload",()=>stream?.getTracks().forEach(t=>t.stop()));
+</script>
+</body>
+</html>
