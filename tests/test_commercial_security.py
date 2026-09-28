@@ -48,3 +48,32 @@ def test_privileged_api_accepts_configured_key(monkeypatch):
     response = client.get('/api/protected', headers={'Authorization': 'Bearer correct-secret', 'X-Pravidhi-Tenant': 'demo'})
     assert response.status_code == 200
     assert response.json()['status'] == 'authorized'
+
+
+def test_agent_heartbeat_path_is_self_authenticated(monkeypatch):
+    monkeypatch.delenv('PRAVIDHI_API_KEY', raising=False)
+    monkeypatch.delenv('PRAVIDHI_ALLOW_UNAUTHENTICATED_DEV', raising=False)
+    app = make_app()
+
+    @app.post('/api/agents/DESKTOP-GU0324G/heartbeat')
+    def heartbeat():
+        return {'status': 'online'}
+
+    client = TestClient(app)
+    response = client.post('/api/agents/DESKTOP-GU0324G/heartbeat')
+    assert response.status_code == 200
+    assert response.json()['status'] == 'online'
+
+
+def test_unrelated_agent_route_still_requires_control_plane_auth(monkeypatch):
+    monkeypatch.delenv('PRAVIDHI_API_KEY', raising=False)
+    monkeypatch.delenv('PRAVIDHI_ALLOW_UNAUTHENTICATED_DEV', raising=False)
+    app = make_app()
+
+    @app.get('/api/agents/DESKTOP-GU0324G')
+    def agent():
+        return {'agent_id': 'DESKTOP-GU0324G'}
+
+    client = TestClient(app)
+    response = client.get('/api/agents/DESKTOP-GU0324G')
+    assert response.status_code == 503

@@ -7,7 +7,13 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-PUBLIC_EXACT = {'/health','/docs','/redoc','/openapi.json','/auth/providers'}
+PUBLIC_EXACT = {'/health','/docs','/redoc','/openapi.json','/auth/providers','/api/agents/register'}
+
+
+def is_agent_heartbeat_path(path: str) -> bool:
+    """Agent heartbeat is self-authenticated by its per-agent bearer token."""
+    parts = path.strip('/').split('/')
+    return len(parts) == 4 and parts[:2] == ['api', 'agents'] and parts[3] == 'heartbeat'
 PUBLIC_PREFIXES = ('/static/','/.well-known/')
 
 @dataclass(frozen=True)
@@ -34,7 +40,12 @@ def principal_from_request(request: Request) -> Principal | None:
     token, expected = extract_bearer(request), _configured_key()
     if not token or not expected or not _constant_time_equal(token, expected):
         return None
-    return Principal(subject=request.headers.get('x-pravidhi-subject', 'api-key-client'), role=request.headers.get('x-pravidhi-role', 'operator'), tenant_id=request.headers.get('x-pravidhi-tenant', os.getenv('PRAVIDHI_TENANT_ID', 'default')))
+    trusted_headers = os.getenv('PRAVIDHI_TRUST_IDENTITY_HEADERS', '').lower() == 'true'
+    return Principal(
+        subject=request.headers.get('x-pravidhi-subject', 'api-key-client') if trusted_headers else 'api-key-client',
+        role=request.headers.get('x-pravidhi-role', 'operator') if trusted_headers else os.getenv('PRAVIDHI_API_ROLE', 'operator'),
+        tenant_id=request.headers.get('x-pravidhi-tenant', os.getenv('PRAVIDHI_TENANT_ID', 'default')) if trusted_headers else os.getenv('PRAVIDHI_TENANT_ID', 'default'),
+    )
 
 class CommercialSecurityMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, protected_prefixes: Iterable[str] = ('/api/','/v1/')):
@@ -43,7 +54,7 @@ class CommercialSecurityMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
-        if is_public_path(path) or not any(path.startswith(p) for p in self.protected_prefixes):
+        if is_public_path(path) or is_agent_heartbeat_path(path) or not any(path.startswith(p) for p in self.protected_prefixes):
             return await call_next(request)
         if os.getenv('PRAVIDHI_ALLOW_UNAUTHENTICATED_DEV', '').lower() == 'true':
             return await call_next(request)

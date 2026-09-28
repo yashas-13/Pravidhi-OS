@@ -90,6 +90,70 @@ app.add_middleware(
 # /v1 operations require explicit authentication or an intentional dev override.
 app.add_middleware(CommercialSecurityMiddleware)
 
+# Authoritative connected-agent control plane.
+# MCP/ChatGPT is an interface to these routes; it is not an independent agent registry.
+from engine.agent_registry import AgentHeartbeat, AgentRegistration, get_agent_registry
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+
+def _bearer(request: Request) -> str:
+    scheme, _, token = request.headers.get("authorization", "").partition(" ")
+    return token.strip() if scheme.lower() == "bearer" else ""
+
+
+@app.post("/api/agents/register")
+async def register_agent(request: Request, registration: AgentRegistration):
+    """Register an execution endpoint using the one-time bootstrap credential."""
+    bootstrap = __import__("os").getenv("PRAVIDHI_AGENT_REGISTRATION_TOKEN", "")
+    supplied = request.headers.get("X-Pravidhi-Agent-Bootstrap", "")
+    if not bootstrap or not supplied or not __import__("hmac").compare_digest(supplied, bootstrap):
+        return JSONResponse(status_code=401, content={"error": "agent_registration_unauthorized"})
+    expected_tenant = __import__("os").getenv("PRAVIDHI_AGENT_BOOTSTRAP_TENANT", "").strip()
+    if expected_tenant and registration.tenant_id != expected_tenant:
+        return JSONResponse(status_code=403, content={"error": "bootstrap_tenant_mismatch"})
+    registry = get_agent_registry()
+    try:
+        view, token = registry.register(registration)
+    except ValueError as exc:
+        status = 409 if str(exc) == "agent_id_already_registered" else 400
+        return JSONResponse(status_code=status, content={"error": str(exc)})
+    return {"agent": view.model_dump(mode="json"), "agent_token": token, "token_delivery": "one_time"}
+
+
+@app.get("/api/agents")
+async def list_agents(request: Request):
+    """List agents visible to the authenticated control-plane principal."""
+    principal = getattr(request.state, "principal", None)
+    tenant_id = getattr(principal, "tenant_id", None)
+    registry = get_agent_registry()
+    registry.mark_stale()
+    return {"agents": [a.model_dump(mode="json") for a in registry.list(tenant_id=tenant_id)]}
+
+
+@app.get("/api/agents/{agent_id}")
+async def get_agent(agent_id: str, request: Request):
+    """Return one tenant-scoped agent from the authoritative registry."""
+    principal = getattr(request.state, "principal", None)
+    tenant_id = getattr(principal, "tenant_id", None)
+    agent = get_agent_registry().get(agent_id, tenant_id=tenant_id)
+    if agent is None:
+        raise HTTPException(status_code=404, detail="agent_not_found")
+    return agent.model_dump(mode="json")
+
+
+@app.post("/api/agents/{agent_id}/heartbeat")
+async def agent_heartbeat(agent_id: str, heartbeat: AgentHeartbeat, request: Request):
+    """Update liveness/capabilities using the agent's own credential."""
+    token = _bearer(request)
+    if not token:
+        return JSONResponse(status_code=401, content={"error": "agent_authentication_required"})
+    agent = get_agent_registry().heartbeat(agent_id, token, heartbeat, request.client.host if request.client else "")
+    if agent is None:
+        return JSONResponse(status_code=401, content={"error": "invalid_agent_credentials"})
+    return agent.model_dump(mode="json")
+
+
 
 @app.on_event("startup")
 async def startup():

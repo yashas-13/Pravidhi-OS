@@ -208,11 +208,21 @@ class CronDB:
     """SQLite-backed persistence for cron jobs."""
 
     def __init__(self, db_path: str = "~/.pravidhi/cron.db"):
-        expanded = Path(db_path.replace("~", str(Path.home())))
+        expanded = Path(db_path).expanduser()
         expanded.parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(str(expanded))
         self.conn.row_factory = sqlite3.Row
         self._init_schema()
+
+    def close(self) -> None:
+        """Close the SQLite connection so files can be safely moved or deleted."""
+        self.conn.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.close()
 
     def _init_schema(self) -> None:
         self.conn.executescript("""
