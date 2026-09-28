@@ -110,15 +110,13 @@ agent must never be treated as an available execution target.
 ## Security rules
 
 1. Agent registration requires the bootstrap credential.
-2. Agent heartbeats authenticate with the per-agent credential; they do not depend on the control-plane API key.
+2. Agent heartbeats authenticate with the per-agent credential and do not depend on the control-plane API key.
 3. Each agent receives its own credential.
 4. Agent credentials are not shared with the ChatGPT plugin.
-5. Heartbeats authenticate with the agent credential.
-6. Tenant scope is enforced by the registry.
-7. Capabilities are metadata/policy inputs, not authorization by themselves.
-7. Execution still requires the normal identity -> tenant -> role -> capability
-   -> policy -> approval -> execution -> audit chain.
-9. The agent registry must never become a shell bypass.
+5. Tenant scope is enforced by the registry.
+6. Capabilities are metadata/policy inputs, not authorization by themselves.
+7. Execution still requires the normal identity -> tenant -> role -> capability -> policy -> approval -> execution -> audit chain.
+8. The agent registry must never become a shell bypass.
 
 ## Database
 
