@@ -7,7 +7,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-PUBLIC_EXACT = {'/health','/docs','/redoc','/openapi.json','/auth/providers'}
+PUBLIC_EXACT = {'/health','/docs','/redoc','/openapi.json','/auth/providers','/api/agents/register'}
 PUBLIC_PREFIXES = ('/static/','/.well-known/')
 
 @dataclass(frozen=True)
