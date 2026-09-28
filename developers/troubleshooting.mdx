@@ -1,0 +1,35 @@
+---
+title: Troubleshooting
+description: Diagnose common Pravidhi OS failures
+---
+
+## 401 Unauthorized
+
+Check:
+
+- bearer token or session exists
+- token signature is valid
+- issuer and audience match
+- session has not expired
+
+## Tenant error
+
+Verify the authenticated identity contains an accepted tenant claim.
+
+## OAuth callback failure
+
+Check:
+
+- redirect URI is an exact match
+- client ID belongs to the expected provider
+- client secret is configured server-side
+- OAuth state has not expired
+- reverse proxy preserves the expected public path
+
+## Screen unavailable
+
+A headless server may correctly report that no screen agent is attached.
+
+## Execution denied
+
+Check role, approval state, command allowlist and tenant context. Do not weaken authorization merely to make a test pass.

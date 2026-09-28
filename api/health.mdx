@@ -1,0 +1,14 @@
+---
+title: Health
+description: Inspect service and security capability state
+---
+
+## GET /health
+
+Returns service status and capability/security indicators.
+
+```bash
+curl -sS https://pravidhisolutions.in/pravidhi/v3/health
+```
+
+Use this endpoint for monitoring and deployment verification. A degraded status can mean that an optional security dependency, such as an identity provider, is not configured.

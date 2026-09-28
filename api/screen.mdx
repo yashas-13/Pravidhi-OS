@@ -1,0 +1,14 @@
+---
+title: Screen API
+description: Optional desktop screen-agent integration
+---
+
+Screen capabilities require a registered desktop agent.
+
+A headless deployment can legitimately return an unavailable response such as:
+
+`screen_agent_not_attached`
+
+Do not interpret a screen endpoint's existence as proof that a screen is attached.
+
+A production screen agent should authenticate its registration, use a narrowly scoped capability token, and maintain a heartbeat.

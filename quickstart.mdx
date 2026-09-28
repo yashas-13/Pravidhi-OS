@@ -1,0 +1,47 @@
+---
+title: Quickstart
+description: Get Pravidhi OS connected in a few minutes
+---
+
+## 1. Choose your deployment
+
+Pravidhi has three logical components:
+
+1. **AI client** — the interface that requests work.
+2. **Control plane** — authenticates and authorizes requests.
+3. **Agent runtime** — executes approved operations on an authorized machine.
+
+For production, place the control plane behind HTTPS and keep the agent's privileged interfaces off the public internet.
+
+## 2. Verify the control plane
+
+```bash
+curl -sS https://pravidhisolutions.in/pravidhi/v3/health
+```
+
+A healthy deployment should return JSON describing service state and security capabilities.
+
+## 3. Inspect authentication providers
+
+```bash
+curl -sS https://pravidhisolutions.in/pravidhi/v3/auth/providers
+```
+
+OAuth providers are configured server-side. Never put a client secret in a CLI command that can enter shell history.
+
+## 4. Connect an AI client
+
+Use the API contract in [API Overview](/api/overview). Send an authenticated bearer token or an authenticated session cookie according to the deployment configuration.
+
+## 5. Production checklist
+
+- HTTPS enabled
+- OAuth redirect URIs registered exactly
+- OIDC issuer/audience configured where JWT validation is used
+- tenant identity required
+- operator/admin access restricted
+- agent runs with a dedicated service account
+- audit storage protected
+- environment secrets stored outside Git
+- execution allowlist reviewed
+- backups and log rotation configured

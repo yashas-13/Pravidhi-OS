@@ -1,0 +1,28 @@
+---
+title: Pravidhi OS
+description: Authenticated AI control for machines, agents, and infrastructure
+---
+
+Pravidhi OS provides a security boundary between AI clients and machine capabilities.
+
+<CardGroup cols={2}>
+<Card title="Start here" icon="rocket" href="/quickstart">Run the control plane and connect an agent.</Card>
+<Card title="Architecture" icon="diagram-project" href="/architecture">Understand the control and execution model.</Card>
+<Card title="Security" icon="shield-check" href="/platform/security">Review authentication, RBAC, isolation, approvals, and audit.</Card>
+<Card title="API" icon="code" href="/api/overview">Integrate directly with the HTTP API.</Card>
+</CardGroup>
+
+## Core principles
+
+- **Explicit authorization** — machine operations require an authenticated identity and role.
+- **Tenant isolation** — workspace paths are scoped to a tenant.
+- **Approval-aware execution** — sensitive operations can require explicit approval.
+- **Least privilege** — the agent should expose only the capabilities required by the integration.
+- **Auditability** — security-relevant actions produce structured audit events.
+- **No secrets in source** — OAuth secrets, signing keys and bearer tokens belong in secret storage or environment configuration.
+
+## Control-plane endpoint
+
+`https://pravidhisolutions.in/pravidhi/v3`
+
+Use the deployment documentation to adapt this URL for another environment.

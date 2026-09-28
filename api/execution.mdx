@@ -1,0 +1,25 @@
+---
+title: Execution API
+description: Controlled terminal execution and execution lifecycle
+---
+
+Execution endpoints are protected capabilities.
+
+A production client should:
+
+1. authenticate
+2. resolve tenant
+3. validate requested command
+4. check role
+5. satisfy approval requirements
+6. submit execution
+7. correlate the result with the request ID
+8. record or retrieve audit information
+
+Do not treat this interface as a general-purpose remote shell.
+
+### Safety contract
+
+The server should use argument arrays rather than shell strings and execute only commands present in the configured allowlist.
+
+Execution cancellation must be implemented as a real process termination mechanism before it is represented to users as a hard stop.

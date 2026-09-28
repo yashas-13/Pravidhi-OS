@@ -1,0 +1,20 @@
+---
+title: Contributing
+description: Development workflow for Pravidhi OS
+---
+
+## Workflow
+
+1. Create a focused branch.
+2. Make the smallest coherent change.
+3. Update documentation.
+4. Add tests for behavior changes.
+5. Run lint, type and test checks.
+6. Review security impact.
+7. Open a pull request with a clear migration note.
+
+## Security-sensitive changes
+
+Authentication, authorization, execution, filesystem confinement, OAuth and agent registration changes require explicit security review.
+
+Never add a development backdoor that bypasses production authorization.

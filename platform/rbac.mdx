@@ -1,0 +1,28 @@
+---
+title: RBAC
+description: Viewer, operator, and administrator authorization
+---
+
+Pravidhi uses role-based access control.
+
+| Role | Typical capabilities |
+| --- | --- |
+| viewer | health, status, read-only information |
+| operator | approved execution and operational actions |
+| admin | administrative configuration and privileged operations |
+
+The exact endpoint policy is deployment-specific and should be reviewed before production exposure.
+
+## Tenant boundary
+
+A valid identity without a tenant is not sufficient for tenant-scoped operations.
+
+Every filesystem and execution operation should resolve inside the authenticated tenant context.
+
+## Least privilege
+
+Grant operator/admin only where necessary. Do not make OAuth users administrators by default.
+
+## Approval boundary
+
+RBAC answers **who may request** an action. Approval answers **whether this sensitive action may proceed now**. These are separate controls.

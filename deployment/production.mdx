@@ -1,0 +1,45 @@
+---
+title: Production Deployment
+description: Production architecture and deployment checklist
+---
+
+## Reference stack
+
+- Node.js service
+- systemd
+- Nginx
+- Let's Encrypt TLS
+- dedicated service account
+- tenant workspace
+- protected environment file
+
+## Recommended topology
+
+```
+Internet
+   │
+ HTTPS
+   ▼
+Nginx
+   │
+   ▼
+127.0.0.1:8642
+   │
+   ▼
+Pravidhi Agent Control Service
+```
+
+## Checklist
+
+- [ ] TLS certificate valid
+- [ ] upstream bound to loopback
+- [ ] firewall restricts management ports
+- [ ] service account is non-root
+- [ ] OAuth redirect URIs match
+- [ ] secrets are outside Git
+- [ ] logs rotate
+- [ ] backups tested
+- [ ] rate limits enabled
+- [ ] execution allowlist reviewed
+- [ ] operator/admin mappings reviewed
+- [ ] monitoring and alerting configured
