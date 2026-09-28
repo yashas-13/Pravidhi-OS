@@ -17,6 +17,8 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+
+from gateway.security import CommercialSecurityMiddleware
 from pydantic import BaseModel
 
 from engine.pipeline import Pipeline
@@ -78,11 +80,15 @@ app = FastAPI(title="Pravidhi API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[origin.strip() for origin in __import__("os").getenv("PRAVIDHI_ALLOWED_ORIGINS", "http://localhost,http://127.0.0.1").split(",") if origin.strip()],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "X-Pravidhi-Subject", "X-Pravidhi-Role", "X-Pravidhi-Tenant"],
 )
+
+# Commercial boundary: public health/docs remain reachable, privileged /api and
+# /v1 operations require explicit authentication or an intentional dev override.
+app.add_middleware(CommercialSecurityMiddleware)
 
 
 @app.on_event("startup")
