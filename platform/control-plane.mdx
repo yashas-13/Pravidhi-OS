@@ -1,0 +1,32 @@
+---
+title: Control Plane
+description: Central authentication, authorization, routing, and audit boundary
+---
+
+The control plane is the public-facing security boundary.
+
+### Responsibilities
+
+- request authentication
+- OAuth session handling
+- JWT validation
+- tenant resolution
+- RBAC
+- request IDs
+- rate limiting
+- approval state
+- execution dispatch
+- audit logging
+- health and capability reporting
+
+### Public routing
+
+The reference deployment exposes the API below:
+
+`https://pravidhisolutions.in/pravidhi/v3`
+
+Keep the application bound to loopback or a private network where possible and expose it through a hardened reverse proxy.
+
+### Request IDs
+
+Clients should preserve `X-Request-ID` when present. The control plane echoes or creates a request ID so distributed logs can be correlated.
