@@ -1,0 +1,31 @@
+---
+title: API Overview
+description: HTTP integration contract for Pravidhi OS
+---
+
+Base URL:
+
+`https://pravidhisolutions.in/pravidhi/v3`
+
+## Authentication
+
+Protected endpoints accept an authenticated bearer token or an authenticated session where enabled.
+
+```http
+Authorization: Bearer <access-token>
+```
+
+## Common headers
+
+```http
+Content-Type: application/json
+X-Request-ID: <uuid>
+```
+
+## Response conventions
+
+Successful responses are JSON. Errors should contain a machine-readable error identifier and enough context for the client to recover without leaking secrets.
+
+## Security
+
+Do not call privileged endpoints from an untrusted browser without CSRF/session protections and explicit authorization.
