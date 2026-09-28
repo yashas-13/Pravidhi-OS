@@ -47,6 +47,7 @@ def register() -> dict:
     tenant = os.environ["PRAVIDHI_TENANT_ID"]
     name = os.getenv("PRAVIDHI_AGENT_NAME", socket.gethostname())
     payload = {
+        "agent_id": os.getenv("PRAVIDHI_AGENT_ID", socket.gethostname()),
         "tenant_id": tenant,
         "name": name,
         "platform": platform.system().lower(),
