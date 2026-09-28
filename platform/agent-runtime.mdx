@@ -1,0 +1,33 @@
+---
+title: Agent Runtime
+description: Safe execution boundary for machine capabilities
+---
+
+The agent runtime turns authorized requests into constrained machine operations.
+
+## Capability classes
+
+- terminal commands
+- tenant-scoped filesystem access
+- application inspection/control
+- screen-agent integration
+- execution lifecycle
+- health and registration
+
+## Terminal policy
+
+Production agents should use an explicit command allowlist and argument validation. Do not expose an unrestricted shell endpoint.
+
+The reference runtime uses a non-root execution identity for terminal commands and rejects arbitrary shell composition.
+
+## Filesystem policy
+
+Workspace paths are resolved beneath the tenant workspace. Path traversal must be rejected after canonicalization.
+
+## Screen control
+
+Screen control is an optional capability. A headless server can report that no screen agent is attached instead of pretending screen control exists.
+
+## Endpoint registration
+
+Desktop agents should authenticate to the control plane and identify their device without embedding long-lived credentials in source code.
