@@ -109,8 +109,15 @@ async def register_agent(request: Request, registration: AgentRegistration):
     supplied = request.headers.get("X-Pravidhi-Agent-Bootstrap", "")
     if not bootstrap or not supplied or not __import__("hmac").compare_digest(supplied, bootstrap):
         return JSONResponse(status_code=401, content={"error": "agent_registration_unauthorized"})
+    expected_tenant = __import__("os").getenv("PRAVIDHI_AGENT_BOOTSTRAP_TENANT", "").strip()
+    if expected_tenant and registration.tenant_id != expected_tenant:
+        return JSONResponse(status_code=403, content={"error": "bootstrap_tenant_mismatch"})
     registry = get_agent_registry()
-    view, token = registry.register(registration)
+    try:
+        view, token = registry.register(registration)
+    except ValueError as exc:
+        status = 409 if str(exc) == "agent_id_already_registered" else 400
+        return JSONResponse(status_code=status, content={"error": str(exc)})
     return {"agent": view.model_dump(mode="json"), "agent_token": token, "token_delivery": "one_time"}
 
 
