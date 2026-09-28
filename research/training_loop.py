@@ -341,7 +341,7 @@ tags: [{', '.join(draft.tags)}]
 - Use Count: 0
 """
         skill_file = skill_dir / "SKILL.md"
-        with open(skill_file, "w") as f:
+        with open(skill_file, "w", encoding="utf-8") as f:
             f.write(content)
 
         logger.info(f"Generated skill: {draft.name} ({draft.source}, {draft.confidence:.0%})")
