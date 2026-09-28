@@ -214,7 +214,17 @@ class CronDB:
         self.conn.row_factory = sqlite3.Row
         self._init_schema()
 
-    def close(self) -> None:\n        """Close the SQLite connection so files can be safely moved or deleted."""\n        self.conn.close()\n\n    def __enter__(self):\n        return self\n\n    def __exit__(self, exc_type, exc, tb):\n        self.close()\n\n    def _init_schema(self) -> None:
+    def close(self) -> None:
+        """Close the SQLite connection so files can be safely moved or deleted."""
+        self.conn.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.close()
+
+    def _init_schema(self) -> None:
         self.conn.executescript("""
             CREATE TABLE IF NOT EXISTS jobs (
                 id TEXT PRIMARY KEY,
