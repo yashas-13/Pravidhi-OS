@@ -24,6 +24,9 @@ npx pravidhi-agentos@latest providers
 npx pravidhi-agentos@latest login google
 npx pravidhi-agentos@latest login github
 npx pravidhi-agentos@latest version
+npx pravidhi-agentos@latest init
+npx pravidhi-agentos@latest status
+npx pravidhi-agentos@latest capabilities
 ```
 
 ## Configuration
@@ -43,3 +46,13 @@ AI client -> Pravidhi control plane -> authenticated agent -> authorized machine
 ```
 
 The CLI is intentionally dependency-free and does not contain credentials. Authentication is handled by the Pravidhi control plane.
+
+## Authentication
+
+Privileged control-plane requests use a Bearer token. For the reference gateway, set `PRAVIDHI_API_KEY` through a secret manager or protected environment and never commit it.
+
+```bash
+PRAVIDHI_API_KEY='replace-with-secret' npx pravidhi-agentos@latest status
+```
+
+The gateway intentionally fails closed when privileged authentication is not configured. See `commercial/SECURITY_BOUNDARY.md`.
