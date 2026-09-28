@@ -1,0 +1,172 @@
+# =============================================================================
+# Pravidhi — Self-Progressive AI Ecosystem Configuration
+# =============================================================================
+
+# ── Core Engine ──────────────────────────────────────────────────────────────
+engine:
+  name: "pravidhi"
+  version: "0.1.0"
+  description: "Self-progressive AI ecosystem — non-stop self-improving agent harness"
+
+  # Pipeline stages (order matters)
+  pipeline:
+    stages:
+      - ingest          # Receive and parse user request
+      - validate_input  # Check input clarity, completeness, safety
+      - decompose       # Break into sub-tasks (if needed)
+      - route           # Select optimal model provider
+      - execute         # Run tasks via tools/MCP/skills/plugins
+      - validate_output # Multi-layer output validation
+      - learn           # Record patterns, update experience DB
+    enabled: true
+
+  # Multi-layer validation
+  validation:
+    schema: true        # JSON Schema / Pydantic validation on tool inputs
+    behavioral: true    # LLM-as-Judge behavioral validation
+    regression: true    # Compare against known-good patterns
+    test_suite: true    # Run recorded test cases against output
+
+  # Checkpoint / rollback
+  checkpoint:
+    enabled: true
+    auto_snapshot: true
+    max_snapshots: 50
+
+# ── Provider Routing ─────────────────────────────────────────────────────────
+providers:
+  default_model: "gpt-5.4-mini"
+
+  routing:
+    sort: "price"       # price | throughput | latency
+    only: []            # Whitelist: use only these providers
+    ignore: []          # Blacklist: never use these providers
+    order: []           # Explicit priority order
+    require_parameters: false
+
+  fallback:
+    enabled: true
+    max_retries: 3
+
+  credential_pools:
+    enabled: true
+    strategy: "round_robin"   # round_robin | least_used | fill_first | random
+
+  # Provider credentials (loads from .env by default)
+  credentials:
+    openrouter: "${OPENROUTER_API_KEY}"
+    openai: "${OPENAI_API_KEY}"
+    anthropic: "${ANTHROPIC_API_KEY}"
+    gemini: "${GEMINI_API_KEY}"
+
+# ── Offline Cron Engine ──────────────────────────────────────────────────────
+cron:
+  enabled: true
+  daemonize: true          # Run as independent daemon process
+  database: "~/.pravidhi/cron.db"
+
+  scheduler:
+    poll_interval: 15      # Seconds between job checks
+    max_concurrent: 10
+    timezone: "UTC"
+
+  delivery:
+    default: "file"        # file | webhook | telegram | discord | slack | mqtt
+    retry_attempts: 3
+    retry_delay: 60
+
+  # Jobs that run regardless of gateway state
+  jobs:
+    - name: "auto-research"
+      schedule: "0 * * * *"          # Every hour
+      mode: "agent"
+      prompt: "Run auto-research cycle: analyze recent executions, generate skills"
+      delivery: "file"
+
+    - name: "system-health"
+      schedule: "*/5 * * * *"        # Every 5 minutes
+      mode: "no-agent"
+      command: "pravidhi status"
+      delivery: "file"
+
+# ── Auto-Research Engine ─────────────────────────────────────────────────────
+research:
+  enabled: true
+  cycle_interval: 3600       # Seconds between auto-research cycles (1h)
+
+  training_loop:
+    max_history: 100         # Analyze last N executions
+    convergence_threshold: 0.95
+    min_epochs: 3
+    max_epochs: 10
+
+  skill_generation:
+    enabled: true
+    output_dir: "~/.codex/skills/"
+    from_mistakes: true
+    from_successes: true
+    from_requests: true
+
+  experience_db:
+    enabled: true
+    backend: "json"          # json | sqlite | vector
+    path: "~/.pravidhi/experience/"
+    indexing: "keyword"      # keyword | embedding | hybrid
+
+# ── Gateway ───────────────────────────────────────────────────────────────────
+gateway:
+  enabled: true
+
+  api_server:
+    host: "127.0.0.1"
+    port: 8642
+    cors_origins: ["http://localhost:3000"]
+
+  transports:
+    cli: true
+    api: true
+    # telegram: false
+    # discord: false
+
+# ── MCP Integration ──────────────────────────────────────────────────────────
+mcp:
+  servers:
+    filesystem:
+      command: "npx"
+      args: ["-y", "@modelcontextprotocol/server-filesystem", "/home/ubuntu"]
+      enabled: false
+    # Add more MCP servers here
+
+# ── Memory ────────────────────────────────────────────────────────────────────
+memory:
+  working:
+    enabled: true
+    max_chars: 2200
+    file: "~/.pravidhi/memory.md"
+
+  user_profile:
+    enabled: true
+    max_chars: 1375
+    file: "~/.pravidhi/user.md"
+
+  long_term:
+    enabled: true
+    backend: "json"          # json | sqlite | vector
+    path: "~/.pravidhi/long-term/"
+
+# ── Context Files ─────────────────────────────────────────────────────────────
+context:
+  auto_discover: true
+  files:
+    - "pravidhi.md"
+    - "AGENTS.md"
+    - "CLAUDE.md"
+    - "SOUL.md"
+    - ".cursorrules"
+  merge_strategy: "deepest_first"
+
+# ── Personality ───────────────────────────────────────────────────────────────
+personality:
+  primary: "pravidhi"       # Name of the SOUL.md identity file
+  skin: "default"
+  style: "concise"
