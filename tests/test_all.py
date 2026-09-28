@@ -140,7 +140,8 @@ def test_cron_engine():
         parse_cron_expression, next_cron_time, JobMode, JobStatus,
     )
 
-    db_path = "/tmp/test_pravidhi_cron.db"
+    tmpdir = Path(tempfile.mkdtemp())
+    db_path = str(tmpdir / "test_pravidhi_cron.db")
     db = CronDB(db_path)
 
     # Expression parsing
@@ -181,7 +182,9 @@ def test_cron_engine():
     assert db.get_job(job_id) is None
 
     # Cleanup
+    db.close()
     Path(db_path).unlink(missing_ok=True)
+    tmpdir.rmdir()
     print("  ✓ Cron engine works")
 
 
