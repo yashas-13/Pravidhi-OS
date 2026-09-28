@@ -337,6 +337,10 @@ https://mcp.pravidhisolutions.in/.well-known/openai-apps-challenge
 
 The challenge token is intentionally **not stored in this repository**. Tokens supplied by a platform must remain deployment configuration, not source code.
 
+## Feature and use-case guide
+
+See [Feature & Use-Case Guide](docs/FEATURE_USE_CASES.md) for practical examples covering machine control, authentication, RBAC, tenant isolation, approvals, terminal/filesystem operations, MCP, desktop workflows, evidence, knowledge management, SOC, DevOps, developer and IT workflows.
+
 ## Security documentation
 
 - [Security Boundary](commercial/SECURITY_BOUNDARY.md)
