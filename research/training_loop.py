@@ -79,7 +79,7 @@ class ExperienceDB:
     """
 
     def __init__(self, base_path: str = "~/.pravidhi/experience/"):
-        self.path = Path(base_path.replace("~", str(Path.home())))
+        self.path = Path(base_path).expanduser()
         self.path.mkdir(parents=True, exist_ok=True)
         self.steps_file = self.path / "steps.jsonl"
         self.patterns_file = self.path / "patterns.json"
