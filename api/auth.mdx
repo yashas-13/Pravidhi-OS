@@ -1,0 +1,34 @@
+---
+title: Authentication API
+description: OAuth provider discovery and session endpoints
+---
+
+## GET /auth/providers
+
+Returns configured authentication providers.
+
+## GET /auth/google
+
+Starts Google OAuth.
+
+## GET /auth/google/callback
+
+Completes the Google OAuth authorization-code flow.
+
+## GET /auth/github
+
+Starts GitHub OAuth.
+
+## GET /auth/github/callback
+
+Completes the GitHub OAuth authorization-code flow.
+
+## GET /auth/session
+
+Returns the current authenticated session when a valid session cookie exists.
+
+## POST /auth/logout
+
+Invalidates the current application session.
+
+OAuth redirect URIs must exactly match the values configured in the provider console.
