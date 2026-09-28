@@ -1,0 +1,54 @@
+---
+title: Architecture
+description: Pravidhi OS control-plane and agent architecture
+---
+
+## System model
+
+```
+┌──────────────────────────────┐
+│ AI client / Chat interface   │
+└──────────────┬───────────────┘
+               │ HTTPS
+┌──────────────▼───────────────┐
+│ Pravidhi Control Plane       │
+│                              │
+│ Auth → Tenant → RBAC         │
+│ Rate limit → Approval → API  │
+│ Audit → Request correlation  │
+└──────────────┬───────────────┘
+               │ constrained channel
+┌──────────────▼───────────────┐
+│ Pravidhi Agent Runtime       │
+│                              │
+│ terminal · files · screen    │
+│ application control          │
+└──────────────┬───────────────┘
+               │
+┌──────────────▼───────────────┐
+│ Authorized machine resources │
+└──────────────────────────────┘
+```
+
+## Request lifecycle
+
+1. The client establishes an authenticated identity.
+2. The control plane validates the identity.
+3. The tenant is resolved from trusted identity claims.
+4. RBAC checks the requested capability.
+5. Sensitive work is checked for approval.
+6. The operation is constrained by path, command and resource policies.
+7. An audit event records the action and request ID.
+8. The result is returned to the client.
+
+## Trust boundaries
+
+The agent should be treated as a separate trust boundary from the AI model. Model output is not authorization.
+
+Never convert arbitrary model-generated strings into unrestricted shell execution.
+
+## Deployment modes
+
+- **Headless server agent** for infrastructure automation.
+- **Desktop agent** for authorized workstation control.
+- **Hybrid agent** where the control plane is centralized and execution occurs on registered endpoints.
