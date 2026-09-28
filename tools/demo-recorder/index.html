@@ -45,7 +45,7 @@ button:disabled{opacity:.45;cursor:not-allowed}label{display:block;margin:13px 0
 <h3>Editor</h3>
 <div class="meta"><label>Start (sec)<input id="trimStart" type="number" min="0" value="0" step=".1"></label>
 <label>End (sec)<input id="trimEnd" type="number" min="0" value="0" step=".1"></label></div>
-<button id="apply" disabled>Set preview range</button>
+<button id="apply" disabled>Set preview range</button><button id="exportTrim" disabled>Export trimmed WebM</button>
 <p class="hint">The editor stores an in/out range for the demo. Original capture remains local until you download it.</p>
 </div>
 </section>
@@ -88,7 +88,8 @@ $("stop").onclick=stop;
 $("pause").onclick=()=>{if(!recorder)return;if(recorder.state==="recording"){recorder.pause();$("pause").textContent="Resume";msg("Recording paused.")}else if(recorder.state==="paused"){recorder.resume();$("pause").textContent="Pause";msg("Recording resumed.")}};
 $("download").onclick=()=>{if(!blob)return;const a=document.createElement("a"),name=($("filename").value||"pravidhi-os-demo").replace(/[^a-z0-9._-]+/gi,"-");a.href=URL.createObjectURL(blob);a.download=name+".webm";a.click();URL.revokeObjectURL(a.href)};
 $("preview").onloadedmetadata=()=>{$("trimEnd").value=Number.isFinite($("preview").duration)?$("preview").duration.toFixed(1):$("trimEnd").value};
-$("apply").onclick=()=>{const v=$("preview"),s=Math.max(0,Number($("trimStart").value)||0),e=Math.max(s,Number($("trimEnd").value)||v.duration);v.currentTime=s;v.dataset.in=s;v.dataset.out=e;v.ontimeupdate=()=>{if(v.currentTime>=e)v.pause()};msg("Preview range set to "+s.toFixed(1)+"s → "+e.toFixed(1)+"s. Download currently contains the original local capture.")};
+$("apply").onclick=()=>{const v=$("preview"),s=Math.max(0,Number($("trimStart").value)||0),e=Math.min(v.duration,Math.max(s,Number($("trimEnd").value)||v.duration));v.currentTime=s;v.dataset.in=s;v.dataset.out=e;v.ontimeupdate=()=>{if(v.currentTime>=e)v.pause()};$("exportTrim").disabled=false;msg("Preview range set to "+s.toFixed(1)+"s → "+e.toFixed(1)+"s. Export will create a trimmed local WebM.")};
+$("exportTrim").onclick=async()=>{const v=$("preview"),s=Number(v.dataset.in||0),e=Number(v.dataset.out||v.duration);if(!blob||!v.captureStream){msg("Trim export is not supported by this browser; download the original recording instead.");return}try{$("exportTrim").disabled=true;v.currentTime=s;await v.play();const cap=v.captureStream(),parts=[],out=new MediaRecorder(cap,{mimeType:mime(),videoBitsPerSecond:5000000});out.ondataavailable=e=>{if(e.data.size)parts.push(e.data)};out.onstop=()=>{const b=new Blob(parts,{type:mime()}),a=document.createElement("a"),name=(($("filename").value||"pravidhi-os-demo").replace(/[^a-z0-9._-]+/gi,"-"))+"-trimmed.webm";a.href=URL.createObjectURL(b);a.download=name;a.click();URL.revokeObjectURL(a.href);$("exportTrim").disabled=false;msg("Trimmed WebM exported locally.",true)};out.start(100);v.ontimeupdate=()=>{if(v.currentTime>=e){v.pause();out.stop();cap.getTracks().forEach(t=>t.stop())}}}catch(err){$("exportTrim").disabled=false;msg("Trim export failed: "+err.message)}};
 window.addEventListener("beforeunload",()=>stream?.getTracks().forEach(t=>t.stop()));
 </script>
 </body>
