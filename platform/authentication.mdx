@@ -1,0 +1,56 @@
+---
+title: Authentication
+description: OAuth, OIDC, JWT and session authentication
+---
+
+Pravidhi supports two complementary authentication patterns.
+
+## OAuth
+
+The control plane exposes provider discovery and OAuth entry points:
+
+```
+GET /auth/providers
+GET /auth/google
+GET /auth/google/callback
+GET /auth/github
+GET /auth/github/callback
+GET /auth/session
+POST /auth/logout
+```
+
+The reference deployment uses Google and GitHub as optional identity providers.
+
+OAuth client secrets must remain server-side.
+
+## OIDC / JWT
+
+For enterprise identity providers, configure:
+
+- issuer
+- audience
+- JWKS endpoint
+
+JWT validation should verify signature, issuer, audience, expiry and relevant claims.
+
+## Identity claims
+
+Tenant identity may be supplied through trusted claims such as:
+
+- `tenant_id`
+- `org_id`
+- `organization_id`
+
+Roles may be derived from claims such as:
+
+- `roles`
+- `realm_access.roles`
+- `scope`
+
+## Sessions
+
+OAuth login can establish an HttpOnly, Secure session cookie. Treat the session as a bearer credential and invalidate it on logout.
+
+## Role mapping
+
+OAuth identities should default to the minimum required role. Production deployments should maintain an explicit allowlist or role mapping for users who require operator or administrator capabilities.
