@@ -1,0 +1,19 @@
+---
+title: Filesystem API
+description: Tenant-scoped read and write operations
+---
+
+Filesystem operations are confined to the authenticated tenant workspace.
+
+Conceptually:
+
+`/opt/pravidhi-agent/workspace/<tenant>/...`
+
+A client must never be able to escape this directory using:
+
+- `../`
+- absolute paths
+- symlink tricks
+- alternate path encodings
+
+Canonicalize and verify the final path before every read or write.
