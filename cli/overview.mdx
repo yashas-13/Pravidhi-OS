@@ -1,0 +1,16 @@
+---
+title: CLI Overview
+description: Command-line access to Pravidhi AgentOS
+---
+
+The AgentOS CLI is intended to provide a small, dependency-free entry point for control-plane diagnostics and authentication discovery.
+
+Example:
+
+```bash
+npx pravidhi-agentos@latest health
+```
+
+Set `PRAVIDHI_API_URL` to target another control plane.
+
+The CLI does not store OAuth client secrets.
