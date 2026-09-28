@@ -33,6 +33,14 @@ button:disabled{opacity:.45;cursor:not-allowed}label{display:block;margin:13px 0
 </div>
 <div class="status" id="status">Ready. Choose your screen/window when recording starts.</div>
 <div class="timeline">
+<h3>Recording library</h3>
+<div class="status" id="coverage">Loading coverage…</div>
+<button id="saveRecording" disabled>Save recording locally</button>
+<button id="exportPackage" disabled>Export evidence manifest</button>
+<button id="clearLibrary">Clear local library</button>
+<div class="status" id="library">No saved recordings.</div>
+</div>
+<div class="timeline">
 <h3>Action evidence log</h3>
 <select id="actionSelect"></select>
 <button id="logAction">Log action timestamp</button>
@@ -66,7 +74,30 @@ const ACTIONS=[
 ["ACT-09","Terminal / shell"],["ACT-10","Screen agent"],["ACT-11","Browser / external systems"],["ACT-12","Audit"],
 ["ACT-13","MCP integration"],["ACT-14","Fail-closed behavior"]
 ];
-let recorder=null,stream=null,chunks=[],blob=null,startAt=0,actionEvents=[];
+let recorder=null,stream=null,chunks=[],blob=null,startAt=0,actionEvents=[],savedId=null;
+const DB_NAME="pravidhi-os-evidence",DB_VERSION=1,STORE="recordings";
+function db(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB_NAME,DB_VERSION);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE,{keyPath:"id"})};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+async function dbPut(item){const d=await db();return new Promise((resolve,reject)=>{const tx=d.transaction(STORE,"readwrite");tx.objectStore(STORE).put(item);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}
+async function dbAll(){const d=await db();return new Promise((resolve,reject)=>{const r=d.transaction(STORE,"readonly").objectStore(STORE).getAll();r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+async function dbClear(){const d=await db();return new Promise((resolve,reject)=>{const tx=d.transaction(STORE,"readwrite");tx.objectStore(STORE).clear();tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}
+async function renderLibrary(){
+ const rows=await dbAll(),counts=Object.fromEntries(ACTIONS.map(([id])=>[id,0]));
+ rows.forEach(r=>(r.actions||[]).forEach(a=>counts[a.id]=(counts[a.id]||0)+1));
+ $("coverage").textContent=ACTIONS.map(([id,name])=>id+" "+name+" — "+(counts[id]?"RECORDED":"NOT RECORDED")).join("\n");
+ $("library").textContent=rows.length?rows.map(r=>r.filename+" | "+new Date(r.createdAt).toLocaleString()+" | "+(r.actions||[]).map(a=>a.id).join(", ")).join("\n"):"No saved recordings.";
+ $("exportPackage").disabled=!rows.length;
+}
+$("saveRecording").onclick=async()=>{
+ if(!blob){msg("Stop a recording before saving it.");return}
+ const id=crypto.randomUUID(),name=(($("filename").value||"pravidhi-os-demo").replace(/[^a-z0-9._-]+/gi,"-"))+".webm";
+ const item={id,filename:name,createdAt:new Date().toISOString(),duration:Number($("preview").duration||0),mime:blob.type,actions:actionEvents,blob};
+ await dbPut(item);savedId=id;await renderLibrary();$("saveRecording").disabled=true;msg("Recording and evidence metadata saved in this browser.",true);
+};
+$("clearLibrary").onclick=async()=>{if(confirm("Delete all locally stored Pravidhi OS recordings?")){await dbClear();await renderLibrary();savedId=null}};
+$("exportPackage").onclick=async()=>{
+ const rows=await dbAll(),manifest={schemaVersion:"1.0.0",product:"Pravidhi OS",createdAt:new Date().toISOString(),recordings:rows.map(r=>({id:r.id,filename:r.filename,createdAt:r.createdAt,duration:r.duration,mime:r.mime,actions:r.actions}))};
+ const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(manifest,null,2)],{type:"application/json"}));a.download="pravidhi-os-evidence-manifest.json";a.click();
+};
 ACTIONS.forEach(([id,name])=>{const o=document.createElement("option");o.value=id;o.textContent=id+" — "+name;document.getElementById("actionSelect").appendChild(o)});
 function renderActionLog(){document.getElementById("actionLog").textContent=actionEvents.length?actionEvents.map(x=>x.id+" | "+x.name+" | "+new Date(x.timestamp).toLocaleTimeString()).join("\n"):"No actions logged yet.";document.getElementById("exportLog").disabled=!actionEvents.length}
 document.getElementById("logAction").onclick=()=>{const [id,name]=ACTIONS.find(x=>x[0]===document.getElementById("actionSelect").value);actionEvents.push({id,name,timestamp:new Date().toISOString(),recordingTime:recorder&&startAt?Math.max(0,(Date.now()-startAt)/1000):null});renderActionLog();msg("Logged "+id+" — "+name,true)};
@@ -92,7 +123,7 @@ $("start").onclick=async()=>{
     recorder=new MediaRecorder(stream,{mimeType:mime(),videoBitsPerSecond:5000000});
     recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
     recorder.onstop=()=>{
-      blob=new Blob(chunks,{type:mime()});$("preview").src=URL.createObjectURL(blob);$("download").disabled=false;$("apply").disabled=false;
+      blob=new Blob(chunks,{type:mime()});$("preview").src=URL.createObjectURL(blob);$("download").disabled=false;$("apply").disabled=false;$("saveRecording").disabled=false;savedId=null;
       const duration=(Date.now()-startAt)/1000;$("trimEnd").value=duration.toFixed(1);msg("Recording ready. Review it, set the in/out range, then download.",true);
     };
     recorder.onerror=e=>msg("Recorder error: "+(e.error?.message||"unknown"));
@@ -107,6 +138,7 @@ $("download").onclick=()=>{if(!blob)return;const a=document.createElement("a"),n
 $("preview").onloadedmetadata=()=>{$("trimEnd").value=Number.isFinite($("preview").duration)?$("preview").duration.toFixed(1):$("trimEnd").value};
 $("apply").onclick=()=>{const v=$("preview"),s=Math.max(0,Number($("trimStart").value)||0),e=Math.min(v.duration,Math.max(s,Number($("trimEnd").value)||v.duration));v.currentTime=s;v.dataset.in=s;v.dataset.out=e;v.ontimeupdate=()=>{if(v.currentTime>=e)v.pause()};$("exportTrim").disabled=false;msg("Preview range set to "+s.toFixed(1)+"s → "+e.toFixed(1)+"s. Export will create a trimmed local WebM.")};
 $("exportTrim").onclick=async()=>{const v=$("preview"),s=Number(v.dataset.in||0),e=Number(v.dataset.out||v.duration);if(!blob||!v.captureStream){msg("Trim export is not supported by this browser; download the original recording instead.");return}try{$("exportTrim").disabled=true;v.currentTime=s;await v.play();const cap=v.captureStream(),parts=[],out=new MediaRecorder(cap,{mimeType:mime(),videoBitsPerSecond:5000000});out.ondataavailable=e=>{if(e.data.size)parts.push(e.data)};out.onstop=()=>{const b=new Blob(parts,{type:mime()}),a=document.createElement("a"),name=(($("filename").value||"pravidhi-os-demo").replace(/[^a-z0-9._-]+/gi,"-"))+"-trimmed.webm";a.href=URL.createObjectURL(b);a.download=name;a.click();URL.revokeObjectURL(a.href);$("exportTrim").disabled=false;msg("Trimmed WebM exported locally.",true)};out.start(100);v.ontimeupdate=()=>{if(v.currentTime>=e){v.pause();out.stop();cap.getTracks().forEach(t=>t.stop())}}}catch(err){$("exportTrim").disabled=false;msg("Trim export failed: "+err.message)}};
+renderLibrary().catch(e=>msg("Evidence library unavailable: "+e.message));
 window.addEventListener("beforeunload",()=>stream?.getTracks().forEach(t=>t.stop()));
 </script>
 </body>
