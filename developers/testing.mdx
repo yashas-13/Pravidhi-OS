@@ -1,0 +1,34 @@
+---
+title: Testing
+description: Validate authentication, authorization and execution safely
+---
+
+## Minimum test layers
+
+### Unit
+
+Validate parsing, path confinement, claim extraction, role mapping and command allowlists.
+
+### Integration
+
+Validate:
+
+- unauthenticated request rejection
+- valid authentication
+- invalid issuer or audience
+- missing tenant
+- insufficient role
+- approval-required operation
+- rate-limit behavior
+- request ID propagation
+- OAuth state validation
+
+### Deployment
+
+```bash
+nginx -t
+systemctl is-active pravidhi-agent
+curl -fsS https://pravidhisolutions.in/pravidhi/v3/health
+```
+
+Never run destructive tests against production infrastructure.
