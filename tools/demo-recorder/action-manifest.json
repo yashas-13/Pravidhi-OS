@@ -1,0 +1,76 @@
+{
+  "version": "1.0.0",
+  "source": "Pravidhi OS Action & Demo Recording Matrix",
+  "actions": [
+    [
+      "ACT-01",
+      "Health",
+      "LIVE — public MCP"
+    ],
+    [
+      "ACT-02",
+      "Capabilities",
+      "LIVE — public MCP"
+    ],
+    [
+      "ACT-03",
+      "Authentication",
+      "ARCHITECTURE / deployment-dependent"
+    ],
+    [
+      "ACT-04",
+      "Authorization / RBAC",
+      "ARCHITECTURE / deployment-dependent"
+    ],
+    [
+      "ACT-05",
+      "Tenant isolation",
+      "ARCHITECTURE / deployment-dependent"
+    ],
+    [
+      "ACT-06",
+      "Approval gates",
+      "ARCHITECTURE / deployment-dependent"
+    ],
+    [
+      "ACT-07",
+      "Execution",
+      "ARCHITECTURE / deployment-dependent"
+    ],
+    [
+      "ACT-08",
+      "Filesystem",
+      "ARCHITECTURE / deployment-dependent"
+    ],
+    [
+      "ACT-09",
+      "Terminal / shell",
+      "ARCHITECTURE / deployment-dependent"
+    ],
+    [
+      "ACT-10",
+      "Screen agent",
+      "ARCHITECTURE / deployment-dependent"
+    ],
+    [
+      "ACT-11",
+      "Browser / external systems",
+      "ARCHITECTURE / deployment-dependent"
+    ],
+    [
+      "ACT-12",
+      "Audit",
+      "ARCHITECTURE / deployment-dependent"
+    ],
+    [
+      "ACT-13",
+      "MCP integration",
+      "LIVE — transport; tool surface is limited"
+    ],
+    [
+      "ACT-14",
+      "Fail-closed behavior",
+      "RELEASE GATE / test per deployment"
+    ]
+  ]
+}
