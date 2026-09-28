@@ -1,0 +1,32 @@
+[Unit]
+Description=Pravidhi OS Python Runtime API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pravidhi
+Group=pravidhi
+WorkingDirectory=/opt/pravidhi-os
+EnvironmentFile=-/etc/pravidhi-os.env
+ExecStart=/opt/pravidhi-os/.venv/bin/pravidhi serve --host 127.0.0.1 --port 8765
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+PrivateDevices=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryMax=1G
+TasksMax=128
+LimitNOFILE=8192
+ReadWritePaths=/opt/pravidhi-os
+
+[Install]
+WantedBy=multi-user.target
