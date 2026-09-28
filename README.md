@@ -45,3 +45,20 @@ Credentials, OAuth client secrets, bearer tokens, private keys and production en
 ## License
 
 MIT
+
+## Runtime source
+
+The repository now contains the migrated Pravidhi runtime source tree, including:
+
+- Python engine, pipeline, provider routing, validation, sandbox and registry components
+- Gateway/API, chat and control UI components
+- Cron scheduler, memory and research subsystems
+- Router agent and project configuration
+- Pravidhi AgentOS CLI package
+- Operational scripts, tests and reusable project skills
+
+The runtime source is kept at the repository root so Python package imports and relative paths remain compatible with the existing implementation.
+
+## Source migration
+
+Runtime code was migrated from the legacy `yashas-13/pravidhi` repository and is now maintained as part of `yashas-13/Pravidhi-OS`.
