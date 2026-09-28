@@ -29,3 +29,18 @@ Successful responses are JSON. Errors should contain a machine-readable error id
 ## Security
 
 Do not call privileged endpoints from an untrusted browser without CSRF/session protections and explicit authorization.
+
+## Public and privileged routes
+
+Public discovery endpoints are limited to health, API documentation, authentication-provider discovery, static resources and `.well-known` metadata.
+
+The reference gateway treats `/api/*` and `/v1/*` as privileged. Configure `PRAVIDHI_API_KEY` through a secret manager/environment and send it as a Bearer token:
+
+```http
+Authorization: Bearer <PRAVIDHI_API_KEY>
+X-Request-ID: <uuid>
+```
+
+If the privileged gateway is not configured, it fails closed with `503 security_not_configured`. Do not enable `PRAVIDHI_ALLOW_UNAUTHENTICATED_DEV` in production.
+
+Enterprise deployments should replace the service-key layer with verified OIDC/JWT enforcement and trusted tenant/role claims.
