@@ -1,0 +1,20 @@
+---
+title: Integrations
+description: Connect AI clients, identity providers and desktop agents
+---
+
+## AI clients
+
+AI clients should call the control plane instead of receiving direct unrestricted machine credentials.
+
+## Identity providers
+
+Google and GitHub OAuth can provide application login. Enterprise OIDC can be used for JWT-based integrations.
+
+## Desktop agents
+
+A desktop agent should register with a unique device identity and receive only the capabilities it needs.
+
+## Event delivery
+
+If webhooks are introduced, sign payloads, include timestamps and nonces, and reject replayed events.
