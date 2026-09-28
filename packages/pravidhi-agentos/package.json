@@ -1,0 +1,19 @@
+{
+  "name": "pravidhi-agentos",
+  "version": "1.0.0",
+  "description": "Pravidhi AgentOS CLI for authenticated infrastructure and agent control",
+  "type": "module",
+  "bin": {
+    "pravidhi": "./bin/pravidhi.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "homepage": "https://pravidhisolutions.in",
+  "license": "MIT",
+  "files": [
+    "bin",
+    "README.md",
+    "LICENSE"
+  ]
+}
