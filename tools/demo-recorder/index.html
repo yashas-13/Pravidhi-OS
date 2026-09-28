@@ -32,6 +32,13 @@ button:disabled{opacity:.45;cursor:not-allowed}label{display:block;margin:13px 0
 <button id="download" disabled>Download WebM</button>
 </div>
 <div class="status" id="status">Ready. Choose your screen/window when recording starts.</div>
+<div class="timeline">
+<h3>Action evidence log</h3>
+<select id="actionSelect"></select>
+<button id="logAction">Log action timestamp</button>
+<button id="exportLog" disabled>Export action log JSON</button>
+<div class="status" id="actionLog">No actions logged yet.</div>
+</div>
 </section>
 <section class="card">
 <h2>Recording setup</h2>
@@ -53,7 +60,17 @@ button:disabled{opacity:.45;cursor:not-allowed}label{display:block;margin:13px 0
 </main>
 <script>
 const $=id=>document.getElementById(id);
-let recorder=null,stream=null,chunks=[],blob=null,startAt=0;
+const ACTIONS=[
+["ACT-01","Health"],["ACT-02","Capabilities"],["ACT-03","Authentication"],["ACT-04","Authorization / RBAC"],
+["ACT-05","Tenant isolation"],["ACT-06","Approval gates"],["ACT-07","Execution"],["ACT-08","Filesystem"],
+["ACT-09","Terminal / shell"],["ACT-10","Screen agent"],["ACT-11","Browser / external systems"],["ACT-12","Audit"],
+["ACT-13","MCP integration"],["ACT-14","Fail-closed behavior"]
+];
+let recorder=null,stream=null,chunks=[],blob=null,startAt=0,actionEvents=[];
+ACTIONS.forEach(([id,name])=>{const o=document.createElement("option");o.value=id;o.textContent=id+" — "+name;document.getElementById("actionSelect").appendChild(o)});
+function renderActionLog(){document.getElementById("actionLog").textContent=actionEvents.length?actionEvents.map(x=>x.id+" | "+x.name+" | "+new Date(x.timestamp).toLocaleTimeString()).join("\n"):"No actions logged yet.";document.getElementById("exportLog").disabled=!actionEvents.length}
+document.getElementById("logAction").onclick=()=>{const [id,name]=ACTIONS.find(x=>x[0]===document.getElementById("actionSelect").value);actionEvents.push({id,name,timestamp:new Date().toISOString(),recordingTime:recorder&&startAt?Math.max(0,(Date.now()-startAt)/1000):null});renderActionLog();msg("Logged "+id+" — "+name,true)};
+document.getElementById("exportLog").onclick=()=>{const payload={schemaVersion:"1.0.0",product:"Pravidhi OS",recording:document.getElementById("filename").value+".webm",createdAt:new Date().toISOString(),events:actionEvents};const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}));a.download=(document.getElementById("filename").value||"pravidhi-os-demo")+"-action-log.json";a.click()};
 function msg(s,ok=false){$("status").textContent=s;$("status").className="status"+(ok?" ok":"")}
 function mime(){return MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")?"video/webm;codecs=vp9,opus":"video/webm"}
 async function getStream(){
