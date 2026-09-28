@@ -1,45 +1,32 @@
----
-title: Production Deployment
-description: Production architecture and deployment checklist
----
+# Production Deployment
 
-## Reference stack
+Pravidhi OS has two runtime layers:
 
-- Node.js service
-- systemd
-- Nginx
-- Let's Encrypt TLS
-- dedicated service account
-- tenant workspace
-- protected environment file
+1. Agent Control API — authenticated control plane on `/pravidhi/v3/`.
+2. Python Runtime API — repository runtime on private `127.0.0.1:8765`.
 
-## Recommended topology
+Do not replace the control-plane service when deploying the Python runtime. Deploy it as the separate `pravidhi-runtime.service`.
 
-```
-Internet
-   │
- HTTPS
-   ▼
-Nginx
-   │
-   ▼
-127.0.0.1:8642
-   │
-   ▼
-Pravidhi Agent Control Service
+## Install
+
+```bash
+git clone https://github.com/yashas-13/Pravidhi-OS.git /opt/pravidhi-os
+cd /opt/pravidhi-os
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -e .
 ```
 
-## Checklist
+Create a dedicated `pravidhi` service account and install `deployment/pravidhi-runtime.service` as `/etc/systemd/system/pravidhi-runtime.service`.
 
-- [ ] TLS certificate valid
-- [ ] upstream bound to loopback
-- [ ] firewall restricts management ports
-- [ ] service account is non-root
-- [ ] OAuth redirect URIs match
-- [ ] secrets are outside Git
-- [ ] logs rotate
-- [ ] backups tested
-- [ ] rate limits enabled
-- [ ] execution allowlist reviewed
-- [ ] operator/admin mappings reviewed
-- [ ] monitoring and alerting configured
+The service listens only on localhost. Expose it through the existing Nginx TLS virtual host using `deployment/nginx-runtime.conf`.
+
+## Validation
+
+```bash
+systemctl enable --now pravidhi-runtime
+curl -fsS http://127.0.0.1:8765/health
+curl -fsS https://pravidhisolutions.in/pravidhi/runtime/health
+```
+
+Provider API keys belong in `/etc/pravidhi-os.env`; never commit them to Git.
