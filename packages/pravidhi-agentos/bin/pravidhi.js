@@ -17,7 +17,6 @@ function help() {
     "  providers              Show authentication providers",
     "  status                  Show control-plane health and identity status",
     "  capabilities            Show documented agent capabilities",
-    "  audit                   Query audit endpoint",
     "  init                    Print secure agent setup instructions",
     "  login google           Show Google OAuth URL",
     "  login github           Show GitHub OAuth URL",
@@ -54,7 +53,6 @@ async function main() {
     console.log(JSON.stringify({ capabilities: ["terminal","filesystem","screen","browser","application","mcp"], note: "Capabilities are policy-controlled and deployment-dependent." }, null, 2));
     return;
   }
-  if (command === "audit") return request("/api/audit");
   if (command === "init") {
     console.log(["","Pravidhi AgentOS secure setup","","1. Create/register a machine in your Pravidhi control plane.","2. Set PRAVIDHI_API_URL to the control-plane base URL.","3. Set PRAVIDHI_API_KEY using your secret manager; never commit it.","4. Run: npx pravidhi-agentos@latest health","5. Run: npx pravidhi-agentos@latest status","","Privileged API access is fail-closed when authentication is not configured.",""].join("\n"));
     return;
