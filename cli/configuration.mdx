@@ -1,0 +1,16 @@
+---
+title: CLI Configuration
+description: Configure the AgentOS CLI
+---
+
+## PRAVIDHI_API_URL
+
+Overrides the default API endpoint.
+
+```bash
+PRAVIDHI_API_URL=https://example.com/pravidhi/v3 npx pravidhi-agentos@latest health
+```
+
+Do not put access tokens or secrets into committed shell scripts.
+
+For CI, inject secrets through the CI platform's encrypted secret store.
