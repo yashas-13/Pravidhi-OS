@@ -62,3 +62,25 @@ The runtime source is kept at the repository root so Python package imports and 
 ## Source migration
 
 Runtime code was migrated from the legacy `yashas-13/pravidhi` repository and is now maintained as part of `yashas-13/Pravidhi-OS`.
+
+## Commercial distribution
+
+Pravidhi OS is publicly distributed as an open-source agent control-plane project. The commercial roadmap, product editions, security boundary and launch gates are documented under `commercial/`.
+
+### Install
+
+```bash
+npx pravidhi-agentos@latest init
+```
+
+Then configure the control-plane URL and a privileged Bearer credential through your secret manager/environment. Never commit credentials.
+
+### Public architecture
+
+```text
+AI client → Pravidhi control plane → identity → tenant → capability → policy → approval → constrained agent → authorized resource → audit
+```
+
+Privileged `/api/*` and `/v1/*` routes are fail-closed when the reference gateway has not been configured with `PRAVIDHI_API_KEY`. Public health and documentation endpoints remain available for discovery.
+
+See [Commercial Product](commercial/PRODUCT.md), [Security Boundary](commercial/SECURITY_BOUNDARY.md), and [Commercial Roadmap](commercial/ROADMAP.md).
