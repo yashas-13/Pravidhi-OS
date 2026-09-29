@@ -11,6 +11,7 @@ All tool capabilities available through the chat endpoint.
 from __future__ import annotations
 
 import logging
+import secrets
 import time
 import uuid
 from typing import Any, Dict, List, Optional
@@ -96,10 +97,48 @@ from engine.agent_registry import AgentHeartbeat, AgentRegistration, get_agent_r
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
+_AGENT_PAIRINGS: dict[str, float] = {}
+_AGENT_PAIRING_TTL = 300
+
 
 def _bearer(request: Request) -> str:
     scheme, _, token = request.headers.get("authorization", "").partition(" ")
     return token.strip() if scheme.lower() == "bearer" else ""
+
+
+@app.post("/api/agents/pairing/start")
+async def start_agent_pairing(request: Request):
+    """Create a short-lived pairing code for an endpoint on this localhost-only API."""
+    if request.client and request.client.host not in {"127.0.0.1", "::1"}:
+        return JSONResponse(status_code=404, content={"error": "not_found"})
+    now = time.time()
+    for code, expires_at in list(_AGENT_PAIRINGS.items()):
+        if expires_at <= now:
+            _AGENT_PAIRINGS.pop(code, None)
+    code = secrets.token_urlsafe(6).replace("-", "").replace("_", "")[:8].upper()
+    _AGENT_PAIRINGS[code] = now + _AGENT_PAIRING_TTL
+    return {"pairing_code": code, "expires_in_seconds": _AGENT_PAIRING_TTL}
+
+
+@app.post("/api/agents/pair")
+async def pair_agent(request: Request, registration: AgentRegistration):
+    """Exchange a short-lived pairing code for a per-agent credential."""
+    code = request.headers.get("X-Pravidhi-Agent-Pairing", "").strip().upper()
+    expires_at = _AGENT_PAIRINGS.get(code)
+    if not code or not expires_at or expires_at <= time.time():
+        _AGENT_PAIRINGS.pop(code, None)
+        return JSONResponse(status_code=401, content={"error": "invalid_or_expired_pairing_code"})
+    _AGENT_PAIRINGS.pop(code, None)
+    expected_tenant = __import__("os").getenv("PRAVIDHI_AGENT_BOOTSTRAP_TENANT", "").strip()
+    if expected_tenant and registration.tenant_id != expected_tenant:
+        return JSONResponse(status_code=403, content={"error": "pairing_tenant_mismatch"})
+    registry = get_agent_registry()
+    try:
+        view, token = registry.register(registration)
+    except ValueError as exc:
+        status = 409 if str(exc) == "agent_id_already_registered" else 400
+        return JSONResponse(status_code=status, content={"error": str(exc)})
+    return {"agent": view.model_dump(mode="json"), "agent_token": token, "token_delivery": "one_time"}
 
 
 @app.post("/api/agents/register")
