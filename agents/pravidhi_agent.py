@@ -7,9 +7,10 @@ execution adapters can consume the same agent identity later.
 
 Environment:
   PRAVIDHI_CONTROL_URL              e.g. https://mcp.pravidhisolutions.in
-  PRAVIDHI_AGENT_BOOTSTRAP_TOKEN    admin bootstrap credential
+  PRAVIDHI_AGENT_BOOTSTRAP_TOKEN    admin bootstrap credential (or use pairing code)
   PRAVIDHI_TENANT_ID                tenant to register into
   PRAVIDHI_AGENT_NAME               display name
+  PRAVIDHI_AGENT_PAIRING_CODE       short-lived endpoint pairing code
   PRAVIDHI_AGENT_TOKEN_FILE         optional local token path
 """
 
@@ -43,7 +44,8 @@ def token_path() -> Path:
 
 def register() -> dict:
     base = os.environ["PRAVIDHI_CONTROL_URL"].rstrip("/")
-    bootstrap = os.environ["PRAVIDHI_AGENT_BOOTSTRAP_TOKEN"]
+    bootstrap = os.getenv("PRAVIDHI_AGENT_BOOTSTRAP_TOKEN", "")
+    pairing_code = os.getenv("PRAVIDHI_AGENT_PAIRING_CODE", "").strip()
     tenant = os.environ["PRAVIDHI_TENANT_ID"]
     name = os.getenv("PRAVIDHI_AGENT_NAME", socket.gethostname())
     payload = {
@@ -59,11 +61,21 @@ def register() -> dict:
             "python": platform.python_version(),
         },
     }
-    result = _post(
-        f"{base}/api/agents/register",
-        payload,
-        {"X-Pravidhi-Agent-Bootstrap": bootstrap},
-    )
+    if pairing_code:
+        result = _post(
+            f"{base}/api/agents/pair",
+            payload,
+            {"X-Pravidhi-Agent-Pairing": pairing_code},
+        )
+    elif bootstrap:
+        result = _post(
+            f"{base}/api/agents/register",
+            payload,
+            {"X-Pravidhi-Agent-Bootstrap": bootstrap},
+        )
+    else:
+        raise RuntimeError("set PRAVIDHI_AGENT_PAIRING_CODE or PRAVIDHI_AGENT_BOOTSTRAP_TOKEN")
+
     path = token_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({
