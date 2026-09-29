@@ -106,6 +106,27 @@ def _bearer(request: Request) -> str:
     return token.strip() if scheme.lower() == "bearer" else ""
 
 
+@app.get("/_internal/agents")
+async def internal_agent_list(request: Request, tenant_id: str = "default"):
+    """Local-only bridge for the MCP transport; never exposed through Nginx."""
+    if request.client and request.client.host not in {"127.0.0.1", "::1"}:
+        return JSONResponse(status_code=404, content={"error": "not_found"})
+    registry = get_agent_registry()
+    registry.mark_stale()
+    return {"agents": [a.model_dump(mode="json") for a in registry.list(tenant_id=tenant_id)]}
+
+
+@app.get("/_internal/agents/{agent_id}")
+async def internal_agent_detail(agent_id: str, request: Request, tenant_id: str = "default"):
+    """Local-only authoritative agent lookup for the MCP bridge."""
+    if request.client and request.client.host not in {"127.0.0.1", "::1"}:
+        return JSONResponse(status_code=404, content={"error": "not_found"})
+    agent = get_agent_registry().get(agent_id, tenant_id=tenant_id)
+    if agent is None:
+        raise HTTPException(status_code=404, detail="agent_not_found")
+    return agent.model_dump(mode="json")
+
+
 @app.post("/api/agents/pairing/start")
 async def start_agent_pairing(request: Request):
     """Create a short-lived pairing code for an endpoint on this localhost-only API."""
