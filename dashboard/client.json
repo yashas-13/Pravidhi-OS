@@ -1,0 +1,13 @@
+{
+  "client_id": "https://mcp.pravidhisolutions.in/dashboard/client.json",
+  "client_name": "Pravidh Commander Dashboard",
+  "client_uri": "https://mcp.pravidhisolutions.in/dashboard/",
+  "redirect_uris": ["https://mcp.pravidhisolutions.in/dashboard/callback"],
+  "response_types": ["code"],
+  "grant_types": ["authorization_code", "refresh_token"],
+  "token_endpoint_auth_method": "none",
+  "scope": "openid profile email offline_access pravidhi.read",
+  "logo_uri": "https://pravidhisolutions.in/favicon.svg",
+  "tos_uri": "https://pravidhisolutions.in/terms",
+  "policy_uri": "https://pravidhisolutions.in/privacy"
+}
