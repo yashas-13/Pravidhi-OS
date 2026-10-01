@@ -1,4 +1,9 @@
-# Pravidhi OS
+# Pravidh Commander
+
+**Pravidh Commander** is the branded Remote MCP control surface for the Pravidhi control plane. It provides a secure dashboard for authenticated device visibility, usage, account settings, and MCP connectivity at `https://mcp.pravidhisolutions.in/dashboard/`.
+
+> The underlying control-plane architecture remains Pravidhi OS; **Pravidh Commander** is the user-facing product/dashboard name.
+
 
 **Pravidhi OS** is a security-focused agent control plane for supervised AI-assisted operations on infrastructure and authorized computing resources.
 
@@ -81,6 +86,18 @@ AI request
 ```
 
 No layer is intended to bypass the layer below it.
+
+## Pravidh Commander dashboard
+
+The production dashboard is available at:
+
+```text
+https://mcp.pravidhisolutions.in/dashboard/
+```
+
+The dashboard is authenticated through the Pravidhi Keycloak realm and exposes tenant-scoped device, usage, billing-status, and settings views. Device and usage APIs are protected by `pravidhi.read`; no device registry data is intentionally exposed anonymously.
+
+Dashboard source is maintained in [`dashboard/`](dashboard/).
 
 ## MCP integration
 
@@ -256,7 +273,7 @@ tests/             Test suite
 tools/             Developer/operator tooling
 ```
 
-The repository is the canonical open-source source/documentation tree. The production MCP process may be deployed independently from the repository.
+The repository is the canonical open-source source/documentation tree for the Pravidhi control plane and Pravidh Commander dashboard. The production MCP process may be deployed independently from the repository.
 
 ## Quickstart
 
