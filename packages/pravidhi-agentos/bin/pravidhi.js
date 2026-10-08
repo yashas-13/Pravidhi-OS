@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { execFileSync, existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync, chmodSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { homedir, platform } from "node:os";
 import { join } from "node:path";
 
