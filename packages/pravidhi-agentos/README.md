@@ -1,58 +1,59 @@
 # Pravidhi AgentOS CLI
 
-Pravidhi AgentOS connects an authorized machine or infrastructure agent to the Pravidhi control plane so AI clients can operate it under authentication, RBAC, approval and audit controls.
+Pravidhi AgentOS connects an authorized machine or infrastructure agent to the Pravidhi control plane.
 
-## Quick start
+## One-line Termux installer
 
-Once published to npm:
-
-```bash
-npx pravidhi-agentos@latest health
-```
-
-Current package can also be tested directly from the Pravidhi distribution endpoint:
+Run this inside **Termux on Android**:
 
 ```bash
-npx --yes https://pravidhisolutions.in/downloads/pravidhi-agentos-latest.tgz health
+npx --yes pravidhi-agentos@latest termux
 ```
 
-## Commands
+The installer downloads/updates the Pravidhi OS repository, installs Python + `termux-services` + Termux-MCP, creates supervised MCP and agent services, keeps MCP bound to localhost, enables Termux:Boot persistence, and starts the services.
+
+If an existing `~/.pravidhi/agent-token.json` exists, it is preserved.
+
+### First-time pairing
+
+Installation never embeds credentials. For a new device, provide a short-lived pairing code:
 
 ```bash
-npx pravidhi-agentos@latest health
-npx pravidhi-agentos@latest providers
-npx pravidhi-agentos@latest login google
-npx pravidhi-agentos@latest login github
-npx pravidhi-agentos@latest version
-npx pravidhi-agentos@latest init
-npx pravidhi-agentos@latest status
-npx pravidhi-agentos@latest capabilities
+npx --yes pravidhi-agentos@latest termux --pairing-code YOUR_CODE
 ```
 
-## Configuration
-
-Set `PRAVIDHI_API_URL` to use another control-plane deployment:
+or:
 
 ```bash
-PRAVIDHI_API_URL=https://example.example/pravidhi/v3 npx pravidhi-agentos@latest health
+PRAVIDHI_AGENT_PAIRING_CODE=YOUR_CODE npx --yes pravidhi-agentos@latest termux
 ```
 
-Node.js 18 or newer is required.
+An existing agent token can also be supplied through `PRAVIDHI_AGENT_TOKEN`; it is written with mode 0600 and is never printed.
 
-## Architecture
-
-```
-AI client -> Pravidhi control plane -> authenticated agent -> authorized machine
-```
-
-The CLI is intentionally dependency-free and does not contain credentials. Authentication is handled by the Pravidhi control plane.
-
-## Authentication
-
-Privileged control-plane requests use a Bearer token. For the reference gateway, set `PRAVIDHI_API_KEY` through a secret manager or protected environment and never commit it.
+## Other commands
 
 ```bash
-PRAVIDHI_API_KEY='replace-with-secret' npx pravidhi-agentos@latest status
+npx --yes pravidhi-agentos@latest health
+npx --yes pravidhi-agentos@latest providers
+npx --yes pravidhi-agentos@latest login google
+npx --yes pravidhi-agentos@latest login github
+npx --yes pravidhi-agentos@latest version
+npx --yes pravidhi-agentos@latest init
+npx --yes pravidhi-agentos@latest status
+npx --yes pravidhi-agentos@latest capabilities
 ```
 
-The gateway intentionally fails closed when privileged authentication is not configured. See `commercial/SECURITY_BOUNDARY.md`.
+## Termux architecture
+
+```
+Android Termux
+  ├─ termux-mcp :8080 (localhost only)
+  ├─ pravidhi-termux (heartbeat + task worker)
+  └─ Termux:Boot
+          │
+          ▼ outbound HTTPS
+Pravidhi control plane
+  └─ mcp.pravidhisolutions.in
+```
+
+Node.js 18+ is required. The installer does not expose port 8080 to the Internet.
