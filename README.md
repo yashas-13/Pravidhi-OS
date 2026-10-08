@@ -1,4 +1,4 @@
-# Pravidh Commander
+# Pravidhi Commander
 
 **Pravidh Commander** is the branded Remote MCP control surface for the Pravidhi control plane. It provides a secure dashboard for authenticated device visibility, usage, account settings, and MCP connectivity at `https://mcp.pravidhisolutions.in/dashboard/`.
 
