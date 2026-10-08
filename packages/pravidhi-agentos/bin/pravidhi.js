@@ -134,7 +134,7 @@ function installer() {
     "export PRAVIDHI_AGENT_MAX_RESULT_BYTES='200000'",
     "export PRAVIDHI_TERMUX_MCP_URL='http://127.0.0.1:8080'",
     "export PRAVIDHI_AGENT_TOKEN_FILE='$HOME/.pravidhi/agent-token.json'",
-    "export PRAVIDHI_AGENT_CAPABILITIES='["filesystem.read","terminal.bash","android.termux","termux.terminal","termux.filesystem.read"]'",
+    `export PRAVIDHI_AGENT_CAPABILITIES='["filesystem.read","terminal.bash","android.termux","termux.terminal","termux.filesystem.read"]'`,
     "export TERMUX_MCP_HOST='127.0.0.1'",
     "export TERMUX_MCP_PORT='8080'",
     "export TERMUX_MCP_MAX_OUTPUT='200000'",
