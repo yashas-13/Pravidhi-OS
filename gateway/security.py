@@ -14,6 +14,17 @@ def is_agent_heartbeat_path(path: str) -> bool:
     """Agent heartbeat is self-authenticated by its per-agent bearer token."""
     parts = path.strip('/').split('/')
     return len(parts) == 4 and parts[:2] == ['api', 'agents'] and parts[3] == 'heartbeat'
+
+def is_agent_task_path(path: str) -> bool:
+    """Worker task polling/result routes use the per-agent bearer token."""
+    parts = path.strip('/').split('/')
+    return (
+        len(parts) == 5 and parts[:2] == ['api', 'agents'] and
+        parts[3] == 'tasks' and parts[4] in {'next', 'result'}
+    ) or (
+        len(parts) == 6 and parts[:2] == ['api', 'agents'] and
+        parts[3] == 'tasks' and parts[5] == 'result'
+    )
 PUBLIC_PREFIXES = ('/static/','/.well-known/')
 
 @dataclass(frozen=True)
@@ -54,7 +65,7 @@ class CommercialSecurityMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
-        if is_public_path(path) or is_agent_heartbeat_path(path) or not any(path.startswith(p) for p in self.protected_prefixes):
+        if is_public_path(path) or is_agent_heartbeat_path(path) or is_agent_task_path(path) or not any(path.startswith(p) for p in self.protected_prefixes):
             return await call_next(request)
         if os.getenv('PRAVIDHI_ALLOW_UNAUTHENTICATED_DEV', '').lower() == 'true':
             return await call_next(request)
