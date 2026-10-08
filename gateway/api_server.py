@@ -215,6 +215,70 @@ async def agent_heartbeat(agent_id: str, heartbeat: AgentHeartbeat, request: Req
 
 
 
+@app.post("/api/agents/{agent_id}/tasks", response_model=AgentTaskView)
+async def create_agent_task(agent_id: str, task: AgentTaskCreate, request: Request):
+    """Queue a tenant-scoped task for an online registered endpoint."""
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role not in {"operator", "admin"}:
+        raise HTTPException(status_code=403, detail="operator_or_admin_required")
+    agent = get_agent_registry().get(agent_id, tenant_id=principal.tenant_id)
+    if agent is None:
+        raise HTTPException(status_code=404, detail="agent_not_found")
+    required = {
+        "termux.run": "termux.terminal",
+        "termux.read": "termux.filesystem.read",
+        "termux.list": "termux.filesystem.read",
+    }[task.operation]
+    if required not in agent.capabilities:
+        raise HTTPException(status_code=403, detail="agent_capability_missing")
+    from engine.agent_tasks import AgentTaskQueue
+    try:
+        return AgentTaskQueue().create(agent_id, principal.tenant_id, task)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@app.get("/api/agents/{agent_id}/tasks/next")
+async def lease_agent_task(agent_id: str, request: Request):
+    """Lease one task using the registered endpoint's credential."""
+    token = _bearer(request)
+    if not token:
+        return JSONResponse(status_code=401, content={"error": "agent_authentication_required"})
+    from engine.agent_tasks import AgentTaskQueue
+    task = AgentTaskQueue().lease_next(agent_id, token)
+    return task.model_dump(mode="json") if task else {"task_id": None}
+
+
+@app.post("/api/agents/{agent_id}/tasks/{task_id}/result")
+async def complete_agent_task(agent_id: str, task_id: str, payload: dict, request: Request):
+    """Submit a bounded task result using the endpoint credential."""
+    token = _bearer(request)
+    if not token:
+        return JSONResponse(status_code=401, content={"error": "agent_authentication_required"})
+    result = payload.get("result")
+    if not isinstance(result, dict):
+        result = {}
+    error = str(payload.get("error", ""))[:4000]
+    from engine.agent_tasks import AgentTaskQueue
+    task = AgentTaskQueue().complete(agent_id, token, task_id, result, error)
+    if task is None:
+        return JSONResponse(status_code=404, content={"error": "task_not_found_or_unauthorized"})
+    return task.model_dump(mode="json")
+
+
+@app.get("/api/agents/{agent_id}/tasks/{task_id}")
+async def get_agent_task(agent_id: str, task_id: str, request: Request):
+    """Return one tenant-scoped task to the authenticated control-plane principal."""
+    principal = getattr(request.state, "principal", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
+    from engine.agent_tasks import AgentTaskQueue
+    task = AgentTaskQueue().get(task_id, principal.tenant_id)
+    if task is None or task.agent_id != agent_id:
+        raise HTTPException(status_code=404, detail="task_not_found")
+    return task.model_dump(mode="json")
+
+
 @app.on_event("startup")
 async def startup():
     """Initialize Pravidhi engine on API startup."""
