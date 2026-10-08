@@ -43,9 +43,22 @@ def termux_call(path: str, payload: dict[str, Any]) -> dict[str, Any]:
     )
     with urllib.request.urlopen(req, timeout=300) as response:
         raw = response.read(MAX_RESULT_BYTES + 1)
+        content_type = response.headers.get("Content-Type", "")
     if len(raw) > MAX_RESULT_BYTES:
-        return {"ok": True, "truncated": True, "output": raw[:MAX_RESULT_BYTES].decode(errors="replace")}
-    return json.loads(raw.decode() or "{}")
+        return {
+            "ok": True,
+            "truncated": True,
+            "output": raw[:MAX_RESULT_BYTES].decode(errors="replace"),
+            "content_type": content_type,
+        }
+    text = raw.decode(errors="replace")
+    try:
+        value = json.loads(text or "{}")
+        if isinstance(value, dict):
+            return value
+        return {"ok": True, "output": text, "content_type": content_type}
+    except json.JSONDecodeError:
+        return {"ok": True, "output": text, "content_type": content_type}
 
 def execute(task: dict[str, Any]) -> dict[str, Any]:
     p = task.get("parameters", {})
