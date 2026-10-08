@@ -1,6 +1,6 @@
 {
   "name": "pravidhi-agentos",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Pravidhi AgentOS CLI for secure authenticated AI agent and infrastructure control",
   "type": "module",
   "bin": {
@@ -10,6 +10,11 @@
     "node": ">=18"
   },
   "homepage": "https://pravidhisolutions.in",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yashas-13/Pravidhi-OS.git",
+    "directory": "packages/pravidhi-agentos"
+  },
   "license": "MIT",
   "files": [
     "bin",
