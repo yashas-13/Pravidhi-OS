@@ -72,8 +72,8 @@ class AgentTaskQueue:
             task_id="pat_" + uuid.uuid4().hex, agent_id=agent_id, tenant_id=tenant_id,
             operation=task.operation, parameters=task.parameters, status="queued",
         )
-        with self.Session.begin():
-            self.Session().add(row)
+        with self.Session.begin() as session:
+            session.add(row)
         return self._view(row)
 
     def lease_next(self, agent_id: str, token: str) -> Optional[AgentTaskView]:
