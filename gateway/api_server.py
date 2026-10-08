@@ -94,6 +94,7 @@ app.add_middleware(CommercialSecurityMiddleware)
 # Authoritative connected-agent control plane.
 # MCP/ChatGPT is an interface to these routes; it is not an independent agent registry.
 from engine.agent_registry import AgentHeartbeat, AgentRegistration, get_agent_registry
+from engine.agent_tasks import AgentTaskCreate, AgentTaskView
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
