@@ -30,7 +30,7 @@ class AgentTaskRecord(Base):
 
 class AgentTaskCreate(BaseModel):
     operation: str = Field(pattern=r"^(termux\.run|termux\.read|termux\.list)$")
-    parameters: dict[str, Any] = {}
+    parameters: dict[str, Any] = Field(default_factory=dict)
 
 class AgentTaskView(BaseModel):
     task_id: str
@@ -46,8 +46,8 @@ class AgentTaskView(BaseModel):
     completed_at: Optional[datetime] = None
 
 class AgentTaskQueue:
-    def __init__(self):
-        self.registry = get_agent_registry()
+    def __init__(self, registry=None):
+        self.registry = registry or get_agent_registry()
         self.engine = self.registry.engine
         self.Session = self.registry.Session
         Base.metadata.create_all(self.engine)
