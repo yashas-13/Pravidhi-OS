@@ -175,3 +175,22 @@ def test_unknown_mapping_role_fails_closed(monkeypatch):
     )
     assert response.status_code == 503
     assert response.json()["error"] == "firebase_mapping_misconfigured"
+
+    
+def test_user_can_read_but_cannot_mutate_protected_api():
+    from gateway.security import principal_can_access, Principal
+
+    user = Principal(subject="firebase:uid", role="user", tenant_id="tenant-a", account_id="acct-a", auth_method="firebase")
+    assert principal_can_access(user, "GET", "/api/resources")
+    assert principal_can_access(user, "POST", "/v1/chat/completions")
+    assert not principal_can_access(user, "POST", "/api/resources")
+    assert not principal_can_access(user, "DELETE", "/api/resources/1")
+
+
+def test_admin_routes_require_admin_role():
+    from gateway.security import principal_can_access, Principal
+
+    operator = Principal(subject="firebase:uid", role="operator", tenant_id="tenant-a", account_id="acct-a", auth_method="firebase")
+    admin = Principal(subject="firebase:uid", role="admin", tenant_id="tenant-a", account_id="acct-a", auth_method="firebase")
+    assert not principal_can_access(operator, "GET", "/api/admin/roles")
+    assert principal_can_access(admin, "GET", "/api/admin/roles")
