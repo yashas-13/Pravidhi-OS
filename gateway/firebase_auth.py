@@ -36,9 +36,12 @@ def _firebase_app():
         # or GOOGLE_APPLICATION_CREDENTIALS pointing to a server-side file).
         # Never place service-account credentials in the repository/client.
         try:
-            return firebase_admin.get_app()
+            app = firebase_admin.get_app()
         except ValueError:
-            return firebase_admin.initialize_app(options={"projectId": project_id})
+            app = firebase_admin.initialize_app(options={"projectId": project_id})
+        if app.project_id != project_id:
+            raise FirebaseAuthNotConfigured("Firebase Admin app project does not match FIREBASE_PROJECT_ID")
+        return app
     except Exception as exc:
         raise FirebaseAuthNotConfigured("Firebase Admin credentials are unavailable") from exc
 
