@@ -588,9 +588,9 @@ def start_server(host: str = "127.0.0.1", port: int = 8642):
     uvicorn.run(app, host=host, port=port, log_level="info")
 
 
-// Firebase end-user identity verification is intentionally separate from the
-// existing Keycloak/API-key authorization boundary. A verified Firebase
-// identity alone never becomes a Pravidhi tenant principal.
+# Firebase end-user identity verification is intentionally separate from the
+# existing Keycloak/API-key authorization boundary. A verified Firebase
+# identity alone never becomes a Pravidhi tenant principal.
 @app.post("/auth/firebase/verify")
 async def verify_firebase_identity(request: Request):
     from gateway.firebase_auth import FirebaseAuthNotConfigured, FirebaseTokenInvalid, verify_firebase_id_token
