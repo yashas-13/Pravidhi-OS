@@ -7,7 +7,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-PUBLIC_EXACT = {'/health','/docs','/redoc','/openapi.json','/auth/providers','/api/agents/register','/api/agents/pair','/api/agents/pairing/start'}
+PUBLIC_EXACT = {'/health','/docs','/redoc','/openapi.json','/auth/providers','/auth/firebase/verify','/api/agents/register','/api/agents/pair','/api/agents/pairing/start'}
 
 
 def is_agent_heartbeat_path(path: str) -> bool:
