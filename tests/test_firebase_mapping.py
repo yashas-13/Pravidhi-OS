@@ -127,3 +127,51 @@ def test_malformed_mapping_fails_closed(monkeypatch):
     )
     assert response.status_code == 503
     assert response.json()["error"] == "firebase_mapping_misconfigured"
+
+
+def test_invalid_api_key_role_is_rejected(monkeypatch):
+    monkeypatch.setenv("PRAVIDHI_API_KEY", "server-key")
+    monkeypatch.setenv("PRAVIDHI_API_ROLE", "root")
+    monkeypatch.delenv("PRAVIDHI_FIREBASE_USER_MAPPINGS_JSON", raising=False)
+    response = TestClient(make_app()).get(
+        "/api/whoami", headers={"Authorization": "Bearer server-key"}
+    )
+    assert response.status_code == 401
+
+
+def test_invalid_trusted_header_role_is_rejected(monkeypatch):
+    monkeypatch.setenv("PRAVIDHI_API_KEY", "server-key")
+    monkeypatch.setenv("PRAVIDHI_TRUST_IDENTITY_HEADERS", "true")
+    monkeypatch.setenv("PRAVIDHI_FIREBASE_USER_MAPPINGS_JSON", "")
+    response = TestClient(make_app()).get(
+        "/api/whoami",
+        headers={
+            "Authorization": "Bearer server-key",
+            "X-Pravidhi-Role": "superuser",
+        },
+    )
+    assert response.status_code == 401
+
+
+def test_unknown_mapping_role_fails_closed(monkeypatch):
+    monkeypatch.delenv("PRAVIDHI_API_KEY", raising=False)
+    monkeypatch.setenv(
+        "PRAVIDHI_FIREBASE_USER_MAPPINGS_JSON",
+        json.dumps({
+            "uid-approved": {
+                "account_id": "acct-001",
+                "tenant_id": "tenant-alpha",
+                "role": "superuser",
+            }
+        }),
+    )
+    monkeypatch.setattr(
+        firebase_auth,
+        "verify_firebase_id_token",
+        lambda token: {"uid": "uid-approved", "email": None, "email_verified": False},
+    )
+    response = TestClient(make_app()).get(
+        "/api/whoami", headers={"Authorization": "Bearer valid-firebase-token"}
+    )
+    assert response.status_code == 503
+    assert response.json()["error"] == "firebase_mapping_misconfigured"
