@@ -46,6 +46,8 @@ def resolve_firebase_principal(uid: str) -> dict[str, Any] | None:
         )
     if role not in _ALLOWED_ROLES:
         raise FirebaseMappingConfigurationError("Mapping contains an unsupported role")
+    if account_id.strip() != account_id or tenant_id.strip() != tenant_id or role.strip() != role:
+        raise FirebaseMappingConfigurationError("Mapping identifiers and roles must not contain surrounding whitespace")
     return {
         "subject": f"firebase:{uid}",
         "account_id": account_id.strip(),
