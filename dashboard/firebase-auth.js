@@ -94,7 +94,7 @@ function mount() {
         <button class="firebase-secondary" id="firebase-register" type="button">Create account</button>
         <button class="firebase-secondary" id="firebase-login" type="button">Sign in</button>
       </div>
-      <button class="firebase-secondary" id="firebase-google" type="button>">Continue with Google</button>
+      <button class="firebase-secondary" id="firebase-google" type="button">Continue with Google</button>
       <button class="firebase-secondary" id="firebase-reset" type="button">Send password reset email</button>
       <button class="firebase-secondary" id="firebase-logout" type="button" hidden>Sign out of Firebase</button>
       <div id="firebase-message" class="firebase-message" role="status" aria-live="polite"></div>
