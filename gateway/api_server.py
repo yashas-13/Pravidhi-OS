@@ -186,7 +186,9 @@ async def register_agent(request: Request, registration: AgentRegistration):
 async def list_agents(request: Request):
     """List agents visible to the authenticated control-plane principal."""
     principal = getattr(request.state, "principal", None)
-    tenant_id = getattr(principal, "tenant_id", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
+    tenant_id = principal.tenant_id
     registry = get_agent_registry()
     registry.mark_stale()
     return {"agents": [a.model_dump(mode="json") for a in registry.list(tenant_id=tenant_id)]}
@@ -196,7 +198,9 @@ async def list_agents(request: Request):
 async def get_agent(agent_id: str, request: Request):
     """Return one tenant-scoped agent from the authoritative registry."""
     principal = getattr(request.state, "principal", None)
-    tenant_id = getattr(principal, "tenant_id", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
+    tenant_id = principal.tenant_id
     agent = get_agent_registry().get(agent_id, tenant_id=tenant_id)
     if agent is None:
         raise HTTPException(status_code=404, detail="agent_not_found")
@@ -304,7 +308,10 @@ async def startup():
 # ── Provider Discovery Route ─────────────────────────────────────────
 
 @app.get("/api/discover/providers")
-async def discover_providers():
+async def discover_providers(request: Request):
+    principal = getattr(request.state, "principal", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
     """Auto-discover and return all available model providers."""
     from engine.provider_discovery import discover_all
     result = await discover_all()
@@ -313,7 +320,10 @@ async def discover_providers():
 # ── UltraWorker Routes ───────────────────────────────────────────────
 
 @app.post("/api/ultraworker/start")
-async def ultraworker_start(num_workers: int = 3):
+async def ultraworker_start(request: Request, num_workers: int = 3):
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role not in {"operator", "admin"}:
+        raise HTTPException(status_code=403, detail="operator_or_admin_required")
     """Start the ultraworker pool with N parallel workers."""
     from engine.ultraworker import start_pool
     pool = await start_pool(num_workers)
@@ -321,7 +331,10 @@ async def ultraworker_start(num_workers: int = 3):
 
 
 @app.post("/api/ultraworker/stop")
-async def ultraworker_stop():
+async def ultraworker_stop(request: Request):
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role not in {"operator", "admin"}:
+        raise HTTPException(status_code=403, detail="operator_or_admin_required")
     """Stop the ultraworker pool."""
     from engine.ultraworker import get_pool
     await get_pool().stop()
@@ -330,7 +343,10 @@ async def ultraworker_stop():
 # ── Latest Technologies Routes ──────────────────────────────────────────
 
 @app.get("/api/latest/technologies")
-async def latest_technologies():
+async def latest_technologies(request: Request):
+    principal = getattr(request.state, "principal", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
     """Discover and return all latest integrated technologies status."""
     from engine.latest_tech import discover_all_technologies, MCPManager
     from engine.context_window import CONTEXT_WINDOW_CONFIG
@@ -357,7 +373,10 @@ async def latest_technologies():
 
 
 @app.post("/api/latest/mcp/discover")
-async def mcp_discover():
+async def mcp_discover(request: Request):
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role not in {"operator", "admin"}:
+        raise HTTPException(status_code=403, detail="operator_or_admin_required")
     """Discover MCP servers."""
     from engine.latest_tech import get_mcp_manager
     mcp = get_mcp_manager()
@@ -366,7 +385,10 @@ async def mcp_discover():
 
 
 @app.get("/api/latest/self-hosted")
-async def self_hosted_models():
+async def self_hosted_models(request: Request):
+    principal = getattr(request.state, "principal", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
     """Discover self-hosted model endpoints."""
     from engine.latest_tech import get_self_hosted
     sh = get_self_hosted()
@@ -375,7 +397,10 @@ async def self_hosted_models():
 
 
 @app.post("/api/latest/rag/index")
-async def rag_index(data: dict):
+async def rag_index(data: dict, request: Request):
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role not in {"operator", "admin"}:
+        raise HTTPException(status_code=403, detail="operator_or_admin_required")
     """Index documents into RAG store."""
     documents = data.get("documents", [])
     from engine.latest_tech import get_rag
@@ -385,7 +410,10 @@ async def rag_index(data: dict):
 
 
 @app.post("/api/latest/rag/search")
-async def rag_search(query: str, top_k: int = 5):
+async def rag_search(request: Request, query: str, top_k: int = 5):
+    principal = getattr(request.state, "principal", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
     """Search RAG index."""
     from engine.latest_tech import get_rag
     rag = get_rag()
@@ -397,7 +425,10 @@ async def rag_search(query: str, top_k: int = 5):
 # ── Bounty System Routes ────────────────────────────────────────────────
 
 @app.get("/api/bounty/list")
-async def bounty_list(status: str = "", category: str = "", hunter: str = ""):
+async def bounty_list(request: Request, status: str = "", category: str = "", hunter: str = ""):
+    principal = getattr(request.state, "principal", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
     """List bounties with optional filters."""
     from engine.bounty import BountyBoard
     board = BountyBoard()
@@ -407,10 +438,13 @@ async def bounty_list(status: str = "", category: str = "", hunter: str = ""):
 
 
 @app.post("/api/bounty/create")
-async def bounty_create(title: str = "Untitled", description: str = "",
+async def bounty_create(request: Request, title: str = "Untitled", description: str = "",
                          category: str = "feature", reward_amount: float = 0,
                          severity: str = "medium", created_by: str = "anonymous"):
     """Create a new bounty."""
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role not in {"operator", "admin"}:
+        raise HTTPException(status_code=403, detail="operator_or_admin_required")
     from engine.bounty import BountyBoard
     board = BountyBoard()
     b = await board.create_bounty(title, description, category, "vibe", reward_amount,
@@ -419,8 +453,11 @@ async def bounty_create(title: str = "Untitled", description: str = "",
 
 
 @app.post("/api/bounty/claim")
-async def bounty_claim(bounty_id: str, hunter: str):
+async def bounty_claim(request: Request, bounty_id: str, hunter: str):
     """Claim a bounty."""
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role not in {"operator", "admin"}:
+        raise HTTPException(status_code=403, detail="operator_or_admin_required")
     from engine.bounty import BountyBoard
     board = BountyBoard()
     success, msg = await board.claim_bounty(bounty_id, hunter)
@@ -428,8 +465,11 @@ async def bounty_claim(bounty_id: str, hunter: str):
 
 
 @app.post("/api/bounty/complete")
-async def bounty_complete(bounty_id: str, hunter: str, notes: str = "", pr_url: str = ""):
+async def bounty_complete(request: Request, bounty_id: str, hunter: str, notes: str = "", pr_url: str = ""):
     """Submit bounty completion."""
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role not in {"operator", "admin"}:
+        raise HTTPException(status_code=403, detail="operator_or_admin_required")
     from engine.bounty import BountyBoard
     board = BountyBoard()
     success, msg = await board.submit_completion(bounty_id, hunter, notes, pr_url)
@@ -437,8 +477,11 @@ async def bounty_complete(bounty_id: str, hunter: str, notes: str = "", pr_url: 
 
 
 @app.get("/api/bounty/stats")
-async def bounty_stats():
+async def bounty_stats(request: Request):
     """Get bounty board statistics."""
+    principal = getattr(request.state, "principal", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
     from engine.bounty import BountyBoard
     board = BountyBoard()
     return await board.get_stats()
@@ -447,10 +490,13 @@ async def bounty_stats():
 # ── Publisher Routes ────────────────────────────────────────────────────────
 
 @app.post("/api/publish/chat")
-async def publish_chat(title: str = "Pravidhi Neural Chat",
+async def publish_chat(request: Request, title: str = "Pravidhi Neural Chat",
                         description: str = "Advanced AI ecosystem controller.",
                         app_id: str = "pravidhi-chat"):
     """Publish the Pravidhi Chat SPA to Anyclaw."""
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role != "admin":
+        raise HTTPException(status_code=403, detail="admin_required")
     from engine.publisher import AppPublisher
     result = await AppPublisher.publish_chat_ui(title=title, description=description, app_id=app_id)
     if result.success:
@@ -459,8 +505,11 @@ async def publish_chat(title: str = "Pravidhi Neural Chat",
 
 
 @app.get("/api/publish/apps")
-async def list_published_apps():
+async def list_published_apps(request: Request):
     """List apps published via Anyclaw."""
+    principal = getattr(request.state, "principal", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
     from engine.publisher import AppPublisher
     publisher = AppPublisher()
     apps = await publisher.list_apps()
@@ -470,14 +519,20 @@ async def list_published_apps():
 # ── UltraWorker Routes ──────────────────────────────────────────────────────
 
 @app.get("/api/ultraworker/status")
-async def ultraworker_status():
+async def ultraworker_status(request: Request):
     """Get ultraworker pool status."""
+    principal = getattr(request.state, "principal", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
     from engine.ultraworker import get_pool
     return {"status": get_pool().get_status()}
 
 
 @app.post("/api/ultraworker/pipeline")
-async def ultraworker_pipeline(prompt: str, parallel: int = 3):
+async def ultraworker_pipeline(request: Request, prompt: str, parallel: int = 3):
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role not in {"operator", "admin"}:
+        raise HTTPException(status_code=403, detail="operator_or_admin_required")
     """Run pipeline in parallel across multiple models."""
     from engine.ultraworker import get_pool
     pool = get_pool()
@@ -488,7 +543,10 @@ async def ultraworker_pipeline(prompt: str, parallel: int = 3):
 
 
 @app.post("/api/ultraworker/chat")
-async def ultraworker_chat(messages: List[Dict[str, Any]], parallel: int = 3):
+async def ultraworker_chat(request: Request, messages: List[Dict[str, Any]], parallel: int = 3):
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role not in {"operator", "admin"}:
+        raise HTTPException(status_code=403, detail="operator_or_admin_required")
     """Run chat in parallel across multiple models with fusion."""
     from engine.ultraworker import get_pool, WorkItem, WorkItemType
     pool = get_pool()
@@ -522,16 +580,15 @@ async def health():
 
 @app.get("/v1/models", response_model=ModelsResponse)
 async def list_models():
-    """List available models (OpenAI-compatible)."""
-    from engine.provider_router import BUILTIN_PROVIDERS
-    models = []
+    """List models whose providers have server-side credentials configured."""
+    from engine.provider_router import ProviderRouter
+    router = ProviderRouter()
     now = int(time.time())
-    for provider_name, info in BUILTIN_PROVIDERS.items():
-        for model_name in info.get("models", {}):
-            models.append(ModelInfo(
-                id=f"{provider_name}/{model_name}",
-                created=now,
-            ))
+    models = [
+        ModelInfo(id=f"{ep.provider}/{ep.model}", created=now)
+        for ep in router.endpoints.values()
+        if ep.credentials and any(credential.key for credential in ep.credentials)
+    ]
     return ModelsResponse(data=models)
 
 
@@ -551,7 +608,50 @@ async def chat_completions(request: ChatRequest):
     if not user_message:
         raise HTTPException(status_code=400, detail="No user message found")
 
-    # Run through Pravidhi pipeline
+    # Explicit provider/model requests use the provider router. The default
+    # Pravidhi agent model continues through the tool-capable orchestration pipeline.
+    requested_model = request.model.strip()
+    provider = None
+    model_name = requested_model
+    if "/" in requested_model:
+        provider, model_name = requested_model.split("/", 1)
+    elif requested_model.startswith("gemini-"):
+        provider = "gemini"
+
+    if provider:
+        from engine.provider_router import ProviderRouter
+        messages = [
+            {"role": msg.role, "content": msg.content if isinstance(msg.content, str) else " ".join(
+                str(part.get("text", "")) for part in msg.content if isinstance(part, dict)
+            )}
+            for msg in request.messages
+        ]
+        result = await ProviderRouter().chat(messages=messages, model=model_name, provider=provider)
+        if result.get("error"):
+            error_text = str(result["error"])
+            status_code = 503 if "No credential" in error_text else 502
+            raise HTTPException(status_code=status_code, detail=error_text)
+        response_content = str(result.get("content", ""))
+        usage = result.get("usage") or {}
+        return ChatResponse(
+            id=f"pravidhi-{uuid.uuid4().hex[:12]}",
+            created=int(time.time()),
+            model=str(result.get("model") or requested_model),
+            choices=[
+                ChatChoice(
+                    index=0,
+                    message=ChatMessage(role="assistant", content=response_content),
+                    finish_reason="stop",
+                )
+            ],
+            usage=ChatUsage(
+                prompt_tokens=int(usage.get("prompt_tokens", 0) or 0),
+                completion_tokens=int(usage.get("completion_tokens", 0) or 0),
+                total_tokens=int(usage.get("total_tokens", 0) or 0),
+            ),
+        )
+
+    # Default Pravidhi agent model uses the tool-capable orchestration pipeline.
     pipeline = Pipeline()
     ctx = await pipeline.run(user_message)
 
@@ -586,3 +686,34 @@ def start_server(host: str = "127.0.0.1", port: int = 8642):
     import uvicorn
     logger.info(f"Starting Pravidhi API server on http://{host}:{port}")
     uvicorn.run(app, host=host, port=port, log_level="info")
+
+
+# Firebase end-user identity verification is intentionally separate from the
+# existing Keycloak/API-key authorization boundary. A verified Firebase
+# identity alone never becomes a Pravidhi tenant principal.
+@app.post("/auth/firebase/verify")
+async def verify_firebase_identity(request: Request):
+    from gateway.firebase_auth import FirebaseAuthNotConfigured, FirebaseTokenInvalid, verify_firebase_id_token
+
+    scheme, _, token = request.headers.get("authorization", "").partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        return JSONResponse(
+            status_code=401,
+            content={"error": "firebase_bearer_required"},
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    try:
+        claims = verify_firebase_id_token(token.strip())
+    except FirebaseAuthNotConfigured:
+        return JSONResponse(status_code=503, content={"error": "firebase_auth_not_configured"})
+    except FirebaseTokenInvalid:
+        return JSONResponse(status_code=401, content={"error": "invalid_firebase_id_token"})
+    return {
+        "authenticated": True,
+        "provider": "firebase",
+        "uid": claims["uid"],
+        "email": claims.get("email"),
+        "email_verified": bool(claims.get("email_verified", False)),
+        "authorization": "not_granted",
+        "message": "Firebase verifies end-user identity only; use the existing Pravidhi/Keycloak authorization flow for protected operations.",
+    }

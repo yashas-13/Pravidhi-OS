@@ -29,9 +29,10 @@ A caller must not gain another tenant's data merely by supplying a known identif
 
 Reference roles:
 
-- `pravidhi-user`
-- `pravidhi-operator`
-- `pravidhi-admin`
+- `viewer` — read-only access
+- `user` — read access plus explicitly allowlisted end-user chat/search operations
+- `operator` — approved operational/state-changing requests
+- `admin` — administrative routes and approved privileged operations
 
 Recommended capability model:
 
@@ -41,7 +42,7 @@ Recommended capability model:
 | Execute approved action | `pravidhi.execute` | operator/admin |
 | Administrative action | `pravidhi.admin` | admin |
 
-The exact role mapping remains an application policy and must be enforced by the control plane rather than inferred from the scope alone.
+The API gateway applies a baseline method/path role policy, but this does not establish object-level authorization. Every resource handler must still enforce tenant ownership, capability checks, and approval gates. Routes that authenticate agents with per-agent tokens must be reviewed separately.
 
 ## Approval gates
 
