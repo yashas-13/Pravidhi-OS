@@ -586,3 +586,34 @@ def start_server(host: str = "127.0.0.1", port: int = 8642):
     import uvicorn
     logger.info(f"Starting Pravidhi API server on http://{host}:{port}")
     uvicorn.run(app, host=host, port=port, log_level="info")
+
+
+// Firebase end-user identity verification is intentionally separate from the
+// existing Keycloak/API-key authorization boundary. A verified Firebase
+// identity alone never becomes a Pravidhi tenant principal.
+@app.post("/auth/firebase/verify")
+async def verify_firebase_identity(request: Request):
+    from gateway.firebase_auth import FirebaseAuthNotConfigured, FirebaseTokenInvalid, verify_firebase_id_token
+
+    scheme, _, token = request.headers.get("authorization", "").partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        return JSONResponse(
+            status_code=401,
+            content={"error": "firebase_bearer_required"},
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    try:
+        claims = verify_firebase_id_token(token.strip())
+    except FirebaseAuthNotConfigured:
+        return JSONResponse(status_code=503, content={"error": "firebase_auth_not_configured"})
+    except FirebaseTokenInvalid:
+        return JSONResponse(status_code=401, content={"error": "invalid_firebase_id_token"})
+    return {
+        "authenticated": True,
+        "provider": "firebase",
+        "uid": claims["uid"],
+        "email": claims.get("email"),
+        "email_verified": bool(claims.get("email_verified", False)),
+        "authorization": "not_granted",
+        "message": "Firebase verifies end-user identity only; use the existing Pravidhi/Keycloak authorization flow for protected operations.",
+    }
