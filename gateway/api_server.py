@@ -313,7 +313,10 @@ async def discover_providers():
 # ── UltraWorker Routes ───────────────────────────────────────────────
 
 @app.post("/api/ultraworker/start")
-async def ultraworker_start(num_workers: int = 3):
+async def ultraworker_start(request: Request, num_workers: int = 3):
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role not in {"operator", "admin"}:
+        raise HTTPException(status_code=403, detail="operator_or_admin_required")
     """Start the ultraworker pool with N parallel workers."""
     from engine.ultraworker import start_pool
     pool = await start_pool(num_workers)
@@ -321,7 +324,10 @@ async def ultraworker_start(num_workers: int = 3):
 
 
 @app.post("/api/ultraworker/stop")
-async def ultraworker_stop():
+async def ultraworker_stop(request: Request):
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role not in {"operator", "admin"}:
+        raise HTTPException(status_code=403, detail="operator_or_admin_required")
     """Stop the ultraworker pool."""
     from engine.ultraworker import get_pool
     await get_pool().stop()
@@ -357,7 +363,10 @@ async def latest_technologies():
 
 
 @app.post("/api/latest/mcp/discover")
-async def mcp_discover():
+async def mcp_discover(request: Request):
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role not in {"operator", "admin"}:
+        raise HTTPException(status_code=403, detail="operator_or_admin_required")
     """Discover MCP servers."""
     from engine.latest_tech import get_mcp_manager
     mcp = get_mcp_manager()
@@ -375,7 +384,10 @@ async def self_hosted_models():
 
 
 @app.post("/api/latest/rag/index")
-async def rag_index(data: dict):
+async def rag_index(data: dict, request: Request):
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role not in {"operator", "admin"}:
+        raise HTTPException(status_code=403, detail="operator_or_admin_required")
     """Index documents into RAG store."""
     documents = data.get("documents", [])
     from engine.latest_tech import get_rag
@@ -447,10 +459,13 @@ async def bounty_stats():
 # ── Publisher Routes ────────────────────────────────────────────────────────
 
 @app.post("/api/publish/chat")
-async def publish_chat(title: str = "Pravidhi Neural Chat",
+async def publish_chat(request: Request, title: str = "Pravidhi Neural Chat",
                         description: str = "Advanced AI ecosystem controller.",
                         app_id: str = "pravidhi-chat"):
     """Publish the Pravidhi Chat SPA to Anyclaw."""
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role != "admin":
+        raise HTTPException(status_code=403, detail="admin_required")
     from engine.publisher import AppPublisher
     result = await AppPublisher.publish_chat_ui(title=title, description=description, app_id=app_id)
     if result.success:
@@ -477,7 +492,10 @@ async def ultraworker_status():
 
 
 @app.post("/api/ultraworker/pipeline")
-async def ultraworker_pipeline(prompt: str, parallel: int = 3):
+async def ultraworker_pipeline(request: Request, prompt: str, parallel: int = 3):
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role not in {"operator", "admin"}:
+        raise HTTPException(status_code=403, detail="operator_or_admin_required")
     """Run pipeline in parallel across multiple models."""
     from engine.ultraworker import get_pool
     pool = get_pool()
@@ -488,7 +506,10 @@ async def ultraworker_pipeline(prompt: str, parallel: int = 3):
 
 
 @app.post("/api/ultraworker/chat")
-async def ultraworker_chat(messages: List[Dict[str, Any]], parallel: int = 3):
+async def ultraworker_chat(request: Request, messages: List[Dict[str, Any]], parallel: int = 3):
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role not in {"operator", "admin"}:
+        raise HTTPException(status_code=403, detail="operator_or_admin_required")
     """Run chat in parallel across multiple models with fusion."""
     from engine.ultraworker import get_pool, WorkItem, WorkItemType
     pool = get_pool()
