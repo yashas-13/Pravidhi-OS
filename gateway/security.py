@@ -17,6 +17,11 @@ PUBLIC_EXACT = {
     "/auth/firebase/verify", "/api/agents/register", "/api/agents/pair",
     "/api/agents/pairing/start",
 }
+
+# Every protected route that performs an administrative action must enforce
+# the role vocabulary centrally or with an equivalent route-level policy.
+# Keep this set aligned with gateway/firebase_mapping.py and SECURITY_MODEL.md.
+_ALLOWED_PRINCIPAL_ROLES = {"viewer", "user", "operator", "admin"}
 PUBLIC_PREFIXES = ("/static/", "/.well-known/")
 
 
@@ -70,9 +75,12 @@ def principal_from_request(request: Request) -> Principal | None:
     if not token or not expected or not _constant_time_equal(token, expected):
         return None
     trusted_headers = os.getenv("PRAVIDHI_TRUST_IDENTITY_HEADERS", "").lower() == "true"
+    role = request.headers.get("x-pravidhi-role", "operator") if trusted_headers else os.getenv("PRAVIDHI_API_ROLE", "operator")
+    if role not in _ALLOWED_PRINCIPAL_ROLES:
+        return None
     return Principal(
         subject=request.headers.get("x-pravidhi-subject", "api-key-client") if trusted_headers else "api-key-client",
-        role=request.headers.get("x-pravidhi-role", "operator") if trusted_headers else os.getenv("PRAVIDHI_API_ROLE", "operator"),
+        role=role,
         tenant_id=request.headers.get("x-pravidhi-tenant", os.getenv("PRAVIDHI_TENANT_ID", "default")) if trusted_headers else os.getenv("PRAVIDHI_TENANT_ID", "default"),
         account_id="api-key-client",
         auth_method="api_key",
@@ -107,6 +115,8 @@ def _firebase_principal(token: str) -> tuple[Principal | None, JSONResponse | No
 
     if mapped is None:
         return None, JSONResponse(status_code=403, content={"error": "firebase_identity_not_linked"})
+    if mapped.get("role") not in _ALLOWED_PRINCIPAL_ROLES:
+        return None, JSONResponse(status_code=503, content={"error": "firebase_mapping_misconfigured"})
     if claims.get("email") and not claims.get("email_verified", False):
         return None, JSONResponse(status_code=403, content={"error": "verified_email_required"})
 
