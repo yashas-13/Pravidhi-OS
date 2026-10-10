@@ -176,3 +176,8 @@ class CommercialSecurityMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         response.headers["X-Request-ID"] = request.state.request_id
         return response
+
+
+def require_principal_role(principal: Principal | None, *allowed_roles: str) -> bool:
+    """Return whether a resolved principal has one of the explicitly allowed roles."""
+    return principal is not None and principal.role in _ALLOWED_PRINCIPAL_ROLES and principal.role in allowed_roles
