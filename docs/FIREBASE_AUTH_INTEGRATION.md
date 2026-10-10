@@ -39,3 +39,18 @@ Do not add wildcard domains. Confirm the deployed dashboard origin before editin
 ## Validation status
 
 The client module is added but browser-based end-to-end tests and backend Firebase ID-token validation are not claimed as complete. The backend token-exchange/identity-mapping design must be implemented and tested before enabling Firebase identity for protected application APIs.
+
+
+## Server-side ID-token verification
+
+The API now exposes `POST /auth/firebase/verify` for verifying Firebase end-user identity. Set `FIREBASE_PROJECT_ID=pravidhi-os` and configure Firebase Admin SDK Application Default Credentials on the server (preferred) or a server-side `GOOGLE_APPLICATION_CREDENTIALS` path. Never commit a service-account JSON file or expose Admin credentials to the browser. The endpoint verifies the token through Firebase Admin SDK with revocation checking and returns only verified UID/email fields. It fails closed if Admin credentials are unavailable or the token is invalid.
+
+**This is not a Pravidhi API session exchange.** Firebase identity does not grant a tenant, role, scopes, or execution permissions. Protected `/api/*` and `/v1/*` operations retain the existing Pravidhi API credential boundary; MCP continues to use Keycloak OIDC. Do not send Firebase ID tokens to MCP endpoints. Before allowing Firebase-only access to protected features, implement server-owned Firebase UID → existing Pravidhi account/tenant mapping and enforce server-side RBAC/scopes for every operation. Unknown identities must be denied by default.
+
+## Required validation before production
+
+- Run the Python CI suite including `tests/test_firebase_auth.py`.
+- Browser-test registration, email/password sign-in, Google sign-in, password reset, and sign-out on the deployed HTTPS origin.
+- Add the exact dashboard host to Firebase Authentication → Settings → Authorized domains and verify the Google provider support email.
+- Run negative tests for wrong-project/audience, expired/revoked tokens, missing Admin credentials, unlinked users, cross-tenant access, and insufficient roles.
+- Keep Keycloak and the existing tenant/RBAC boundary in place until the mapping and migration tests are reviewed.
