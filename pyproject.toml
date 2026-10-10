@@ -28,6 +28,7 @@ dependencies = [
     "rich>=15.0",
     "apscheduler>=3.10",
     "python-multipart>=0.0.30",
+    "firebase-admin>=6.5.0",
 ]
 
 [project.optional-dependencies]
