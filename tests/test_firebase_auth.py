@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
 from gateway import firebase_auth
@@ -10,12 +10,12 @@ def make_app():
     app.add_middleware(CommercialSecurityMiddleware)
 
     @app.post("/auth/firebase/verify")
-    async def verify(request):
+    async def verify(request: Request):
         from gateway.api_server import verify_firebase_identity
         return await verify_firebase_identity(request)
 
     @app.get("/api/protected")
-    def protected(request):
+    def protected(request: Request):
         return {"principal": getattr(request.state, "principal", None) is not None}
 
     return app
