@@ -171,11 +171,39 @@ class CommercialSecurityMiddleware(BaseHTTPMiddleware):
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
+        if not principal_can_access(principal, request.method, path):
+            return JSONResponse(status_code=403, content={"error": "insufficient_role"})
+
         request.state.principal = principal
         request.state.request_id = request.headers.get("x-request-id", secrets.token_hex(16))
         response = await call_next(request)
         response.headers["X-Request-ID"] = request.state.request_id
         return response
+
+
+# POST endpoints that are read/query operations and are intentionally usable by end users.
+# Keep this allowlist narrow; all other state-changing methods require operator/admin.
+_USER_POST_PATHS = {"/v1/chat/completions", "/api/latest/rag/search", "/api/publish/chat"}
+_ADMIN_PATH_SEGMENTS = {"admin", "security", "tenants", "users", "billing"}
+
+
+def principal_can_access(principal: Principal | None, method: str, path: str) -> bool:
+    """Apply a conservative baseline RBAC policy after identity authentication.
+
+    Route handlers must still enforce resource ownership and tenant isolation.
+    This guard is a baseline, not a substitute for object-level authorization.
+    """
+    if principal is None or principal.role not in _ALLOWED_PRINCIPAL_ROLES:
+        return False
+    segments = {segment.lower() for segment in path.strip("/").split("/")}
+    if segments & _ADMIN_PATH_SEGMENTS and principal.role != "admin":
+        return False
+    method = method.upper()
+    if method in {"GET", "HEAD", "OPTIONS"}:
+        return True
+    if path in _USER_POST_PATHS:
+        return True
+    return principal.role in {"operator", "admin"}
 
 
 def require_principal_role(principal: Principal | None, *allowed_roles: str) -> bool:
