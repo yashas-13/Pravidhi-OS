@@ -120,25 +120,29 @@ class ProviderRouter:
                 self.endpoints[f"{name}/{model_name}"] = ep
 
     def _resolve_credential(self, env_key: str) -> str:
-        """Resolve credential from env, config, or .env file."""
-        # Check direct env var
-        val = os.getenv(env_key)
-        if val:
-            return val
-
-        # Check config credentials dict
-        cred_key = env_key.lower().replace("_api_key", "").replace("_key", "").lower()
-        creds = self.config.credentials
-        if cred_key in creds:
-            return os.path.expandvars(creds[cred_key])
-
-        # Check .env file
+        """Resolve a provider key without accepting unresolved config placeholders."""
+        # Load a local .env for development, then prefer the process environment.
         try:
             from dotenv import load_dotenv
             load_dotenv()
-            return os.getenv(env_key, "")
         except ImportError:
+            pass
+
+        val = os.getenv(env_key, "").strip()
+        if val:
+            return val
+
+        cred_key = env_key.lower().replace("_api_key", "").replace("_key", "")
+        configured = self.config.credentials.get(cred_key, "")
+        if not isinstance(configured, str) or not configured.strip():
             return ""
+
+        expanded = os.path.expandvars(configured).strip()
+        # os.path.expandvars leaves unknown variables unchanged. Treat those
+        # as missing credentials rather than accidentally advertising a model.
+        if not expanded or "$" in expanded:
+            return ""
+        return expanded
 
     async def select(
         self, intent: Optional[Dict[str, Any]] = None
@@ -238,7 +242,7 @@ class ProviderRouter:
         payload = {
             "model": ep.model,
             "messages": messages,
-            "max_tokens": 1_000_000,
+            "max_tokens": 8192,
             "temperature": 0.7,
         }
 
@@ -247,7 +251,7 @@ class ProviderRouter:
             if ep.api_type == "anthropic":
                 url = f"{ep.base_url}/messages"
                 payload.pop("max_tokens", None)
-                payload["max_tokens"] = 1_000_000
+                payload["max_tokens"] = 8192
 
             response = await client.post(url, headers=headers, json=payload)
             response.raise_for_status()
