@@ -522,16 +522,15 @@ async def health():
 
 @app.get("/v1/models", response_model=ModelsResponse)
 async def list_models():
-    """List available models (OpenAI-compatible)."""
-    from engine.provider_router import BUILTIN_PROVIDERS
-    models = []
+    """List models whose providers have server-side credentials configured."""
+    from engine.provider_router import ProviderRouter
+    router = ProviderRouter()
     now = int(time.time())
-    for provider_name, info in BUILTIN_PROVIDERS.items():
-        for model_name in info.get("models", {}):
-            models.append(ModelInfo(
-                id=f"{provider_name}/{model_name}",
-                created=now,
-            ))
+    models = [
+        ModelInfo(id=f"{ep.provider}/{ep.model}", created=now)
+        for ep in router.endpoints.values()
+        if ep.credentials and any(credential.key for credential in ep.credentials)
+    ]
     return ModelsResponse(data=models)
 
 
@@ -551,7 +550,50 @@ async def chat_completions(request: ChatRequest):
     if not user_message:
         raise HTTPException(status_code=400, detail="No user message found")
 
-    # Run through Pravidhi pipeline
+    # Explicit provider/model requests use the provider router. The default
+    # Pravidhi agent model continues through the tool-capable orchestration pipeline.
+    requested_model = request.model.strip()
+    provider = None
+    model_name = requested_model
+    if "/" in requested_model:
+        provider, model_name = requested_model.split("/", 1)
+    elif requested_model.startswith("gemini-"):
+        provider = "gemini"
+
+    if provider:
+        from engine.provider_router import ProviderRouter
+        messages = [
+            {"role": msg.role, "content": msg.content if isinstance(msg.content, str) else " ".join(
+                str(part.get("text", "")) for part in msg.content if isinstance(part, dict)
+            )}
+            for msg in request.messages
+        ]
+        result = await ProviderRouter().chat(messages=messages, model=model_name, provider=provider)
+        if result.get("error"):
+            error_text = str(result["error"])
+            status_code = 503 if "No credential" in error_text else 502
+            raise HTTPException(status_code=status_code, detail=error_text)
+        response_content = str(result.get("content", ""))
+        usage = result.get("usage") or {}
+        return ChatResponse(
+            id=f"pravidhi-{uuid.uuid4().hex[:12]}",
+            created=int(time.time()),
+            model=str(result.get("model") or requested_model),
+            choices=[
+                ChatChoice(
+                    index=0,
+                    message=ChatMessage(role="assistant", content=response_content),
+                    finish_reason="stop",
+                )
+            ],
+            usage=ChatUsage(
+                prompt_tokens=int(usage.get("prompt_tokens", 0) or 0),
+                completion_tokens=int(usage.get("completion_tokens", 0) or 0),
+                total_tokens=int(usage.get("total_tokens", 0) or 0),
+            ),
+        )
+
+    # Default Pravidhi agent model uses the tool-capable orchestration pipeline.
     pipeline = Pipeline()
     ctx = await pipeline.run(user_message)
 
