@@ -45,7 +45,7 @@ Example shape only (replace placeholders; this is not a real mapping):
 
 Provision mappings only after an administrator independently verifies the Firebase UID and the account/tenant association. Do not auto-link by email, display name, user-supplied tenant headers, or Firebase custom claims. Never let the client submit or change `account_id`, `tenant_id`, or `role`. Email-bearing Firebase identities must have `email_verified=true`. Unmapped UIDs receive 403; malformed mapping configuration fails closed with 503. Existing API-key authentication remains supported.
 
-**Important:** the resolver makes identity-to-account/tenant assignment authoritative, but it does not replace route-level authorization. Review each sensitive route's role/scope checks before giving a role access. In particular, only grant `operator` or `admin` to users explicitly approved for the corresponding operations. Keep MCP on Keycloak OIDC until a separate, reviewed federation design is implemented.
+**Important:** the middleware now applies a conservative baseline role policy: `viewer`/`user` can use read methods and the explicitly allowlisted chat/search POST endpoints; other state-changing requests require `operator` or `admin`; paths containing `admin`, `security`, `tenants`, `users`, or `billing` require `admin`. This is not complete object-level authorization. Every sensitive handler must still enforce tenant ownership and resource-level permissions, and agent routes with their own bearer tokens must be audited separately. Only grant `operator` or `admin` to users explicitly approved for those operations. Keep MCP on Keycloak OIDC until a separate, reviewed federation design is implemented.
 
 ## Gemini model access
 
