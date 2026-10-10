@@ -186,7 +186,9 @@ async def register_agent(request: Request, registration: AgentRegistration):
 async def list_agents(request: Request):
     """List agents visible to the authenticated control-plane principal."""
     principal = getattr(request.state, "principal", None)
-    tenant_id = getattr(principal, "tenant_id", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
+    tenant_id = principal.tenant_id
     registry = get_agent_registry()
     registry.mark_stale()
     return {"agents": [a.model_dump(mode="json") for a in registry.list(tenant_id=tenant_id)]}
@@ -196,7 +198,9 @@ async def list_agents(request: Request):
 async def get_agent(agent_id: str, request: Request):
     """Return one tenant-scoped agent from the authoritative registry."""
     principal = getattr(request.state, "principal", None)
-    tenant_id = getattr(principal, "tenant_id", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
+    tenant_id = principal.tenant_id
     agent = get_agent_registry().get(agent_id, tenant_id=tenant_id)
     if agent is None:
         raise HTTPException(status_code=404, detail="agent_not_found")
@@ -304,7 +308,10 @@ async def startup():
 # ── Provider Discovery Route ─────────────────────────────────────────
 
 @app.get("/api/discover/providers")
-async def discover_providers():
+async def discover_providers(request: Request):
+    principal = getattr(request.state, "principal", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
     """Auto-discover and return all available model providers."""
     from engine.provider_discovery import discover_all
     result = await discover_all()
@@ -336,7 +343,10 @@ async def ultraworker_stop(request: Request):
 # ── Latest Technologies Routes ──────────────────────────────────────────
 
 @app.get("/api/latest/technologies")
-async def latest_technologies():
+async def latest_technologies(request: Request):
+    principal = getattr(request.state, "principal", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
     """Discover and return all latest integrated technologies status."""
     from engine.latest_tech import discover_all_technologies, MCPManager
     from engine.context_window import CONTEXT_WINDOW_CONFIG
@@ -375,7 +385,10 @@ async def mcp_discover(request: Request):
 
 
 @app.get("/api/latest/self-hosted")
-async def self_hosted_models():
+async def self_hosted_models(request: Request):
+    principal = getattr(request.state, "principal", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
     """Discover self-hosted model endpoints."""
     from engine.latest_tech import get_self_hosted
     sh = get_self_hosted()
@@ -397,7 +410,10 @@ async def rag_index(data: dict, request: Request):
 
 
 @app.post("/api/latest/rag/search")
-async def rag_search(query: str, top_k: int = 5):
+async def rag_search(request: Request, query: str, top_k: int = 5):
+    principal = getattr(request.state, "principal", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
     """Search RAG index."""
     from engine.latest_tech import get_rag
     rag = get_rag()
@@ -409,7 +425,10 @@ async def rag_search(query: str, top_k: int = 5):
 # ── Bounty System Routes ────────────────────────────────────────────────
 
 @app.get("/api/bounty/list")
-async def bounty_list(status: str = "", category: str = "", hunter: str = ""):
+async def bounty_list(request: Request, status: str = "", category: str = "", hunter: str = ""):
+    principal = getattr(request.state, "principal", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
     """List bounties with optional filters."""
     from engine.bounty import BountyBoard
     board = BountyBoard()
@@ -419,10 +438,13 @@ async def bounty_list(status: str = "", category: str = "", hunter: str = ""):
 
 
 @app.post("/api/bounty/create")
-async def bounty_create(title: str = "Untitled", description: str = "",
+async def bounty_create(request: Request, title: str = "Untitled", description: str = "",
                          category: str = "feature", reward_amount: float = 0,
                          severity: str = "medium", created_by: str = "anonymous"):
     """Create a new bounty."""
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role not in {"operator", "admin"}:
+        raise HTTPException(status_code=403, detail="operator_or_admin_required")
     from engine.bounty import BountyBoard
     board = BountyBoard()
     b = await board.create_bounty(title, description, category, "vibe", reward_amount,
@@ -431,8 +453,11 @@ async def bounty_create(title: str = "Untitled", description: str = "",
 
 
 @app.post("/api/bounty/claim")
-async def bounty_claim(bounty_id: str, hunter: str):
+async def bounty_claim(request: Request, bounty_id: str, hunter: str):
     """Claim a bounty."""
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role not in {"operator", "admin"}:
+        raise HTTPException(status_code=403, detail="operator_or_admin_required")
     from engine.bounty import BountyBoard
     board = BountyBoard()
     success, msg = await board.claim_bounty(bounty_id, hunter)
@@ -440,8 +465,11 @@ async def bounty_claim(bounty_id: str, hunter: str):
 
 
 @app.post("/api/bounty/complete")
-async def bounty_complete(bounty_id: str, hunter: str, notes: str = "", pr_url: str = ""):
+async def bounty_complete(request: Request, bounty_id: str, hunter: str, notes: str = "", pr_url: str = ""):
     """Submit bounty completion."""
+    principal = getattr(request.state, "principal", None)
+    if principal is None or principal.role not in {"operator", "admin"}:
+        raise HTTPException(status_code=403, detail="operator_or_admin_required")
     from engine.bounty import BountyBoard
     board = BountyBoard()
     success, msg = await board.submit_completion(bounty_id, hunter, notes, pr_url)
@@ -449,8 +477,11 @@ async def bounty_complete(bounty_id: str, hunter: str, notes: str = "", pr_url: 
 
 
 @app.get("/api/bounty/stats")
-async def bounty_stats():
+async def bounty_stats(request: Request):
     """Get bounty board statistics."""
+    principal = getattr(request.state, "principal", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
     from engine.bounty import BountyBoard
     board = BountyBoard()
     return await board.get_stats()
@@ -474,8 +505,11 @@ async def publish_chat(request: Request, title: str = "Pravidhi Neural Chat",
 
 
 @app.get("/api/publish/apps")
-async def list_published_apps():
+async def list_published_apps(request: Request):
     """List apps published via Anyclaw."""
+    principal = getattr(request.state, "principal", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
     from engine.publisher import AppPublisher
     publisher = AppPublisher()
     apps = await publisher.list_apps()
@@ -485,8 +519,11 @@ async def list_published_apps():
 # ── UltraWorker Routes ──────────────────────────────────────────────────────
 
 @app.get("/api/ultraworker/status")
-async def ultraworker_status():
+async def ultraworker_status(request: Request):
     """Get ultraworker pool status."""
+    principal = getattr(request.state, "principal", None)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="authentication_required")
     from engine.ultraworker import get_pool
     return {"status": get_pool().get_status()}
 
